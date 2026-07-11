@@ -1,0 +1,1 @@
+import type {MetadataRoute} from 'next';import {posts} from '@/lib/posts';export default function sitemap():MetadataRoute.Sitemap{const base=process.env.NEXT_PUBLIC_APP_URL||'https://pawdates.app';return ['','/app','/blog',...posts.map(p=>`/blog/${p.slug}`)].map(url=>({url:base+url,lastModified:new Date()}))}
