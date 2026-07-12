@@ -1,0 +1,1 @@
+import type {MetadataRoute} from 'next';export default function manifest():MetadataRoute.Manifest{return {name:'PawDates',short_name:'PawDates',description:'Calm pet treatment reminders',start_url:'/app',display:'standalone',background_color:'#FAF7F2',theme_color:'#C4633A',icons:[{src:'/icon',sizes:'512x512',type:'image/png'}]}}

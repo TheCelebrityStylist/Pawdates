@@ -1,3 +1,3 @@
-import './globals.css';import type {Metadata} from 'next';import {Analytics} from '@vercel/analytics/react';
+import './globals.css';import type {Metadata} from 'next';import {Analytics} from '@vercel/analytics/react';import {ServiceWorker} from '@/components/service-worker';
 export const metadata:Metadata={metadataBase:new URL(process.env.NEXT_PUBLIC_APP_URL||'https://pawdates.app'),title:{default:'PawDates — Pet treatment reminders',template:'%s | PawDates'},description:'Calm reminders for flea, tick, worming, vaccinations and more.',openGraph:{title:'Never miss a treatment again.',description:'PawDates remembers every pet treatment date.',type:'website',images:['/opengraph-image']},twitter:{card:'summary_large_image'}};
-export default function Layout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}<Analytics/></body></html>}
+export default function Layout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}<ServiceWorker/><Analytics/></body></html>}
