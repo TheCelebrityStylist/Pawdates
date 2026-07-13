@@ -1,4 +1,4 @@
-# PawDates Web
+# Tailtend Web
 
 Production-oriented Next.js 15 app for Vercel. Copy `.env.example` to `.env.local` and fill every required value.
 
@@ -16,14 +16,14 @@ Set every variable for both Preview and Production in Vercel. Missing Supabase k
 | `STRIPE_PRICE_YEARLY` | Recurring €9.99/year price ID |
 | `RESEND_API_KEY` | Resend API key after domain verification |
 | `CRON_SECRET` | Random secret of at least 32 characters |
-| `NEXT_PUBLIC_APP_URL` | Canonical URL, normally `https://pawdates.app` |
+| `NEXT_PUBLIC_APP_URL` | Canonical URL, normally `https://www.tailtend.com` |
 | `NEXT_PUBLIC_APP_STORE_URL` | App Store listing, or empty until launch |
 
 ## Setup
 
 1. Create a Supabase project in an EU region. Run `supabase/migrations/0001_initial.sql`, add the production callback URL in Auth, and create a private `pet-photos` bucket.
 2. In Stripe, create a €9.99/year recurring price. Configure the customer portal, add `/api/stripe/webhook`, subscribe to checkout, subscription, and failed-invoice events, then set the price and webhook secrets.
-3. Verify `pawdates.app` in Resend and use `reminders@pawdates.app` as the sender.
+3. Verify `tailtend.com` in Resend and use `reminders@tailtend.com` as the sender.
 4. Import the repository into Vercel, add the environment variables, and deploy. `vercel.json` runs reminders daily at 06:00 UTC.
 
 ## Local development

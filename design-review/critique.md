@@ -1,4 +1,4 @@
-# PawDates design review
+# Tailtend design review
 
 ## Round 1 — desktop landing
 
