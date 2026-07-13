@@ -10,8 +10,11 @@ const serverSchema = publicSchema.extend({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   STRIPE_SECRET_KEY: z.string().min(1),
   STRIPE_WEBHOOK_SECRET: z.string().min(1),
+  STRIPE_PRICE_MONTHLY: z.string().startsWith("price_"),
   STRIPE_PRICE_YEARLY: z.string().startsWith("price_"),
+  FOUNDING_PRICE_YEARLY: z.string().startsWith("price_").optional(),
   RESEND_API_KEY: z.string().min(1),
+  FROM_EMAIL: z.string().min(3),
   CRON_SECRET: z.string().min(32),
 });
 

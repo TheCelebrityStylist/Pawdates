@@ -1,0 +1,1 @@
+import {admin} from '@/lib/supabase';import {serverEnv} from '@/lib/env';import {ok} from '@/lib/http';export async function GET(){const env=serverEnv();const {count}=await admin().from('app_events').select('id',{count:'exact',head:true}).eq('name','upgraded');const claimed=count||0;return ok({founding:Boolean(env.FOUNDING_PRICE_YEARLY&&claimed<100),claimed})}

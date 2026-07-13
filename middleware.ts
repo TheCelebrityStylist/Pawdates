@@ -30,8 +30,9 @@ export async function middleware(request: NextRequest) {
     });
     const { data: { user } } = await supabase.auth.getUser();
     const path = request.nextUrl.pathname;
+    const publicAuth = ["/app/login", "/app/signup", "/app/forgot", "/app/reset"];
     const isProtected =
-      path.startsWith("/app") && !path.startsWith("/app/login");
+      path.startsWith("/app") && !publicAuth.some((entry) => path.startsWith(entry));
     if (isProtected && !user) {
       const login = request.nextUrl.clone();
       login.pathname = "/app/login";
