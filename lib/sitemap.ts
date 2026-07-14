@@ -1,0 +1,1 @@
+import {canonicalHost} from './seo';export const xml=(body:string)=>new Response(`<?xml version="1.0" encoding="UTF-8"?>${body}`,{headers:{'content-type':'application/xml; charset=utf-8','cache-control':'public, max-age=3600'}});export const url=(path:string,lastmod?:string)=>`<url><loc>${canonicalHost}${path}</loc>${lastmod?`<lastmod>${lastmod}</lastmod>`:''}</url>`;

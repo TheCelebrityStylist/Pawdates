@@ -1,0 +1,15 @@
+alter type pet_species add value if not exists 'reptile';
+alter table profiles add column if not exists ical_token uuid not null default gen_random_uuid();
+alter table treatments add column if not exists dose_note text;
+alter table email_events add column if not exists dedupe_key text;
+update email_events set dedupe_key=user_id::text||':'||type where dedupe_key is null;
+create unique index if not exists email_events_dedupe on email_events(dedupe_key) where dedupe_key is not null;
+create table if not exists weight_log(id uuid primary key default gen_random_uuid(),pet_id uuid not null references pets on delete cascade,user_id uuid not null references auth.users on delete cascade,recorded_at date not null default current_date,weight_kg numeric not null check(weight_kg>0),unique(pet_id,recorded_at));
+alter table weight_log enable row level security;
+create policy own_weight_log on weight_log for all using(auth.uid()=user_id) with check(auth.uid()=user_id);
+alter table events rename to app_events;
+alter table app_events drop constraint if exists events_name_check;
+alter table app_events add constraint app_events_name_check check(name in ('signup','pet_created','treatment_created','marked_done','paywall_viewed','checkout_started','upgraded','report_downloaded','ical_enabled'));
+create index if not exists weight_log_pet_date on weight_log(pet_id,recorded_at desc);
+create index if not exists visits_pet_date on vet_visits(pet_id,date desc);
+create or replace function mark_treatment_done(p_treatment_id uuid,p_done_at timestamptz) returns void language plpgsql security invoker as $$declare p treatments;begin select * into p from treatments where id=p_treatment_id and user_id=auth.uid();if not found then raise exception 'not found';end if;insert into treatment_log(treatment_id,user_id,done_at,given_product) values(p.id,p.user_id,p_done_at,p.product_name);update treatments set last_given=p_done_at::date where id=p.id;insert into app_events(user_id,name) values(auth.uid(),'marked_done');end$$;

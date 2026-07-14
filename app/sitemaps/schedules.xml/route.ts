@@ -1,0 +1,1 @@
+import {schedules} from '@/content/schedules';import {xml,url} from '@/lib/sitemap';export function GET(){return xml(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${schedules.map(item=>url(`/schedules/${item.slug}`,item.updated||'2026-07-14')).join('')}</urlset>`)}
