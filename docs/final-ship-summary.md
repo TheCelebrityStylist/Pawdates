@@ -8,7 +8,7 @@
 - Centralised API error responses so backend details are logged with a digest while clients receive plain-language recovery actions.
 - Expanded `/api/health` with boolean-only environment, database and complete-table checks.
 - Added sign-out and a deployed-preview-only Playwright final gate. It records video, trace and failure screenshots and refuses localhost.
-- Added the interaction audit at `design-review/interaction-audit.md` and verified the repository contains no PawDates strings outside Git history.
+- Added the interaction audit at `design-review/interaction-audit.md` and verified the repository contains no former-brand strings outside Git history.
 
 ## Required passing evidence
 

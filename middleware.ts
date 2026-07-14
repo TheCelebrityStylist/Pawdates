@@ -6,7 +6,8 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
 
 export async function middleware(request: NextRequest) {
   const host = request.headers.get("host")?.split(":")[0].toLowerCase();
-  if (host === "tailtend.com" || host?.endsWith(".vercel.app")) {
+  const e2eBypass = Boolean(process.env.VERCEL_AUTOMATION_BYPASS_SECRET) && request.headers.get("x-vercel-protection-bypass") === process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  if (!e2eBypass && (host === "tailtend.com" || host?.endsWith(".vercel.app"))) {
     const canonical = request.nextUrl.clone();
     canonical.protocol = "https:";
     canonical.host = "www.tailtend.com";
