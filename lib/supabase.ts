@@ -1,5 +1,5 @@
-import {createServerClient} from '@supabase/ssr';import {createClient} from '@supabase/supabase-js';import {cookies} from 'next/headers';import type {CookieOptions} from '@supabase/ssr';import {publicEnv,serverEnv} from './env';
+import {createServerClient} from '@supabase/ssr';import {createClient} from '@supabase/supabase-js';import {cookies} from 'next/headers';import type {CookieOptions} from '@supabase/ssr';import {adminEnv,publicEnv} from './env';
 type CookieWrite={name:string;value:string;options:CookieOptions};export async function supabase(){const jar=await cookies();const env=publicEnv();return createServerClient(env.NEXT_PUBLIC_SUPABASE_URL,env.NEXT_PUBLIC_SUPABASE_ANON_KEY,{cookies:{getAll:()=>jar.getAll(),setAll(items:CookieWrite[]){try{items.forEach(({name,value,options})=>jar.set(name,value,options))}catch{}}}})}
-export async function user(){const s=await supabase();const {data}=await s.auth.getUser();return data.user}
-export function admin(){const env=serverEnv();return createClient(env.NEXT_PUBLIC_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}})}
+export async function user(){const s=await supabase();const {data,error}=await s.auth.getUser();if(error)console.error('[auth] Supabase session unavailable',error.message);return data.user}
+export function admin(){const env=adminEnv()||{NEXT_PUBLIC_SUPABASE_URL:'https://unconfigured.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'unconfigured'};return createClient(env.NEXT_PUBLIC_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}})}
 export type Profile={user_id:string;email:string;is_premium:boolean;premium_until:string|null;stripe_customer_id:string|null;reminder_leads:number[];email_reminders_enabled:boolean;ical_token:string};

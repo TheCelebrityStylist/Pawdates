@@ -1,1 +1,0 @@
-export default function Sent(){return <main className="grid min-h-screen place-items-center bg-paper p-5 text-[#272621]"><div className="max-w-sm text-center"><h1 className="text-3xl">Check your inbox.</h1><p className="mt-3 text-black/60">Your PawDates sign-in link is waiting there. You can close this tab.</p></div></main>}

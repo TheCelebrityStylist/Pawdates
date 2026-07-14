@@ -5,6 +5,15 @@ import { NextResponse, type NextRequest } from "next/server";
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
 export async function middleware(request: NextRequest) {
+  const host = request.headers.get("host")?.split(":")[0].toLowerCase();
+  const e2eBypass = Boolean(process.env.VERCEL_AUTOMATION_BYPASS_SECRET) && request.headers.get("x-vercel-protection-bypass") === process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  if (!e2eBypass && (host === "tailtend.com" || host?.endsWith(".vercel.app"))) {
+    const canonical = request.nextUrl.clone();
+    canonical.protocol = "https:";
+    canonical.host = "www.tailtend.com";
+    canonical.port = "";
+    return NextResponse.redirect(canonical, 308);
+  }
   let response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -30,8 +39,9 @@ export async function middleware(request: NextRequest) {
     });
     const { data: { user } } = await supabase.auth.getUser();
     const path = request.nextUrl.pathname;
+    const publicAuth = ["/app/login", "/app/signup", "/app/forgot", "/app/reset"];
     const isProtected =
-      path.startsWith("/app") && !path.startsWith("/app/login");
+      path.startsWith("/app") && !publicAuth.some((entry) => path.startsWith(entry));
     if (isProtected && !user) {
       const login = request.nextUrl.clone();
       login.pathname = "/app/login";
@@ -45,6 +55,4 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-export const config = {
-  matcher: ["/app/:path*"],
-};
+export const config = {matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]};

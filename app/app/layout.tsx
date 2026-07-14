@@ -1,0 +1,1 @@
+import {Analytics} from '@vercel/analytics/react';import {ServiceWorker} from '@/components/service-worker';export default function AppLayout({children}:{children:React.ReactNode}){return <>{children}<ServiceWorker/><Analytics/></>}

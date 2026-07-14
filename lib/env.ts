@@ -1,36 +1,14 @@
-import { z } from "zod";
-
-const publicSchema = z.object({
-  NEXT_PUBLIC_APP_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-});
-
-const serverSchema = publicSchema.extend({
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  STRIPE_SECRET_KEY: z.string().min(1),
-  STRIPE_WEBHOOK_SECRET: z.string().min(1),
-  STRIPE_PRICE_YEARLY: z.string().startsWith("price_"),
-  RESEND_API_KEY: z.string().min(1),
-  CRON_SECRET: z.string().min(32),
-});
-
-function readable(error: z.ZodError) {
-  const key = error.issues[0]?.path[0] ?? "environment variable";
-  return `Missing or invalid ${key} — see README § Keys`;
-}
-
-export function publicEnv() {
-  const result = publicSchema.safeParse(process.env);
-  if (!result.success) throw new Error(readable(result.error));
-  return result.data;
-}
-
-export function serverEnv() {
-  const result = serverSchema.safeParse(process.env);
-  if (!result.success) throw new Error(readable(result.error));
-  return result.data;
-}
-
-export const siteUrl = () =>
-  process.env.NEXT_PUBLIC_APP_URL || "https://pawdates.app";
+import {z} from 'zod';
+const url=z.string().url();const value=z.string().min(1);const price=z.string().startsWith('price_');const logged=new Set<string>();
+function missing(feature:string,keys:string[]){const id=`${feature}:${keys.join(',')}`;if(!logged.has(id)){logged.add(id);console.error(`[config] ${feature} unavailable; missing or invalid: ${keys.join(', ')}`)}}
+function read<T extends z.ZodRawShape>(feature:string,shape:T):z.infer<z.ZodObject<T>>|null{const result=z.object(shape).safeParse(process.env);if(result.success)return result.data;missing(feature,result.error.issues.map(issue=>String(issue.path[0]||'unknown')));return null}
+export const siteUrl=()=>url.safeParse(process.env.NEXT_PUBLIC_APP_URL).success?process.env.NEXT_PUBLIC_APP_URL!:'https://www.tailtend.com';
+export function publicEnv(){return read('Supabase auth',{NEXT_PUBLIC_SUPABASE_URL:url,NEXT_PUBLIC_SUPABASE_ANON_KEY:value})||{NEXT_PUBLIC_SUPABASE_URL:'https://unconfigured.supabase.co',NEXT_PUBLIC_SUPABASE_ANON_KEY:'unconfigured'}}
+export const adminEnv=()=>read('Supabase admin',{NEXT_PUBLIC_SUPABASE_URL:url,SUPABASE_SERVICE_ROLE_KEY:value});
+export const stripeCoreEnv=()=>read('Stripe',{STRIPE_SECRET_KEY:value,NEXT_PUBLIC_APP_URL:url});
+export function stripeCheckoutEnv(plan:'monthly'|'yearly'){if(plan==='monthly'){const env=read('Stripe monthly checkout',{STRIPE_SECRET_KEY:value,STRIPE_PRICE_MONTHLY:price,NEXT_PUBLIC_APP_URL:url});return env?{secret:env.STRIPE_SECRET_KEY,price:env.STRIPE_PRICE_MONTHLY,foundingPrice:undefined,appUrl:env.NEXT_PUBLIC_APP_URL}:null}const env=read('Stripe yearly checkout',{STRIPE_SECRET_KEY:value,STRIPE_PRICE_YEARLY:price,NEXT_PUBLIC_APP_URL:url,FOUNDING_PRICE_YEARLY:price.optional()});return env?{secret:env.STRIPE_SECRET_KEY,price:env.STRIPE_PRICE_YEARLY,foundingPrice:env.FOUNDING_PRICE_YEARLY,appUrl:env.NEXT_PUBLIC_APP_URL}:null}
+export const stripeWebhookEnv=()=>read('Stripe webhook',{STRIPE_SECRET_KEY:value,STRIPE_WEBHOOK_SECRET:value,RESEND_API_KEY:value.optional(),FROM_EMAIL:value.optional(),NEXT_PUBLIC_APP_URL:url});
+export const emailEnv=()=>read('Email',{RESEND_API_KEY:value,FROM_EMAIL:value,NEXT_PUBLIC_APP_URL:url});
+export const cronEnv=()=>read('Cron',{CRON_SECRET:z.string().min(32)});
+export function serverEnv(){const email=emailEnv();const cron=cronEnv();if(!email||!cron)throw new Error('Email sending is not configured');return {...email,...cron}}
+export function envHealth(){const valid=(schema:z.ZodTypeAny,key:string)=>schema.safeParse(process.env[key]).success;return {appUrl:valid(url,'NEXT_PUBLIC_APP_URL'),supabase:valid(url,'NEXT_PUBLIC_SUPABASE_URL')&&valid(value,'NEXT_PUBLIC_SUPABASE_ANON_KEY'),supabaseServiceRole:valid(value,'SUPABASE_SERVICE_ROLE_KEY'),stripe:valid(value,'STRIPE_SECRET_KEY'),stripeWebhook:valid(value,'STRIPE_WEBHOOK_SECRET'),stripeYearly:valid(price,'STRIPE_PRICE_YEARLY'),stripeMonthly:valid(price,'STRIPE_PRICE_MONTHLY'),resend:valid(value,'RESEND_API_KEY'),fromEmail:valid(value,'FROM_EMAIL'),cron:valid(z.string().min(32),'CRON_SECRET'),indexNow:valid(value,'INDEXNOW_KEY')}}
