@@ -9,3 +9,5 @@ node_modules/
 coverage/
 dist/
 *.tsbuildinfo
+design-review/playwright-report/
+design-review/test-results/
