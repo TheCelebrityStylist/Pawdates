@@ -1,1 +1,0 @@
-import {dutchSchedules} from '@/content/schedules-nl';import {xml,url} from '@/lib/sitemap';export function GET(){return xml(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[url('/nl','2026-07-14'),...dutchSchedules.map(item=>url(`/nl/schema/${item.slug}`,item.updated))].join('')}</urlset>`)}

@@ -1,1 +1,0 @@
-import {posts} from '@/lib/posts';import {xml,url} from '@/lib/sitemap';export function GET(){return xml(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${posts.map(post=>url(`/blog/${post.slug}`,post.date)).join('')}</urlset>`)}

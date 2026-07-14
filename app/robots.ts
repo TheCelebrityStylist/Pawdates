@@ -1,1 +1,0 @@
-import type {MetadataRoute} from 'next';import {canonicalHost} from '@/lib/seo';export default function robots():MetadataRoute.Robots{return {rules:{userAgent:'*',allow:'/',disallow:['/app/','/api/']},sitemap:`${canonicalHost}/sitemap.xml`}}

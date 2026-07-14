@@ -1,1 +1,0 @@
-import {xml} from '@/lib/sitemap';import {canonicalHost} from '@/lib/seo';export function GET(){const names=['static','blog','schedules','nl'];return xml(`<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${names.map(name=>`<sitemap><loc>${canonicalHost}/sitemaps/${name}.xml</loc></sitemap>`).join('')}</sitemapindex>`)}
