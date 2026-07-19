@@ -1,6 +1,30 @@
-# Growth Layer — FINAL
+# Growth Layer + Care Profile — FINAL
 
-Status as of this pass: Layers 1a, 1c, 2, 3, 5 shipped and gated green. Layer 1b (product pages) not started — blocked on a decision (see below). Layer 4 partial — share link + PDF shipped, referral system deliberately skipped. Not merged to `main`; everything is on `claude/tailtend-baseline-execution-6zdah9` / PR #4.
+Status as of this pass: Layers 1a, 1c, 2, 3, 5 shipped and gated green. Layer 1b (product pages) not started — blocked on a decision (see below). Layer 4 partial — share link + PDF shipped, referral system deliberately skipped. The Care Profile (sitter handover) feature is also shipped — see its own section below. Not merged to `main`; everything is on `claude/tailtend-baseline-execution-6zdah9` / PR #4.
+
+## Care Profile (sitter handover record)
+
+Data model, owner editor, Sitter Mode view, live check-off, and handover PDF are all built and gated green (typecheck/lint/build/SEO gate). Not independently verified against a live database — see migration note below.
+
+**What shipped:**
+- `pet_profile` + `routine_items` + `routine_checks` tables (migration `0006_care_profile.sql`), same RLS convention as every other table.
+- `/app/pets/[id]/care-profile` — owner editor covering every section from the spec (food, routine timeline, toilet/hygiene, behaviour, house logistics, house access, play/enrichment, essentials flag, forbidden foods), plus a "checked off today" readout so the live check-off loop is actually visible to the owner, not just written to the DB.
+- `/share/[token]` rewritten into Sitter Mode: Essentials strip (flag, vet contact, next medication, feeding times) pinned at the top, today's timeline, forbidden-foods warning in `--stamp` red, every other section rendered only when it has content, "Message the owner" mailto link. Works logged-out (admin-client + token pattern, same as the ical feed) and offline-once-visited (the existing service worker's cache-first strategy for page routes already covers this — no new SW code needed).
+- Live check-off: sitter enters their name, ticks a routine item, write goes through `/api/share/[token]/checkoff` (public, token-gated, mirrors the established admin-client pattern rather than a public RLS policy) with a `unique(routine_item_id, checked_for_date)` constraint so the same item can't double-log in one day.
+- Handover PDF extended from the Layer 4 PDF route: essentials/forbidden-foods warnings, today's timeline, feeding/behaviour highlights, treatment table, QR footer.
+- Funnel events: `care_profile_completed` (via `app_events`, same mechanism as `pet_created`/`marked_done`), `sitter_view_opened`, `sitter_checked_item`, `handover_downloaded` (via `@vercel/analytics`, same as the tools).
+
+**Deliberately not built:**
+- **AI summary button** — skipped entirely. No LLM API key or infrastructure exists anywhere in this repo, and the spec's referenced "20/20 red-team gate" isn't defined here. Building an AI feature that generates care-instruction summaries without a real safety review would be worse than not building it.
+- **House-access fields in the PDF** — the owner's own session can read `house_access` (lockbox/alarm/door notes), but the PDF generator deliberately omits it. A printed sheet that "gets physically passed between people" can't be revoked the way a web link can; those fields stay web-only, gated by the separate `house_access_shared` toggle, for now.
+
+**Referenced-but-missing context**: the task described this as adding to `complete-record-spec.md §1` — that file doesn't exist anywhere in this repo, same situation as `products.ts` and `conductor-detailed.md` earlier in this session. Built from the spec text alone; if a real `complete-record-spec.md` exists elsewhere, worth diffing against it.
+
+**Migration not applied**: `0006_care_profile.sql` has the same status as `0005` — written, gated, not run against any real database. Apply both before this reaches real traffic:
+```
+npm run db:apply supabase/migrations/0005_share_and_pdf.sql
+npm run db:apply supabase/migrations/0006_care_profile.sql
+```
 
 ## URL inventory (new in this pass)
 
@@ -56,7 +80,7 @@ Run `npm run indexnow:ping` with `DEPLOY_URL` set to the production host and a r
 
 ## Open items (not silently dropped)
 
-1. **`.env.local` / Supabase credentials** — never provided this session. Migration `0005_share_and_pdf.sql` is written but **not applied to any real database**. Run `npm run db:apply supabase/migrations/0005_share_and_pdf.sql` against the real `SUPABASE_DB_URL` before the share/PDF features are used in production, or they'll error at runtime (columns don't exist yet).
+1. **`.env.local` / Supabase credentials** — never provided this session. Migrations `0005_share_and_pdf.sql` and `0006_care_profile.sql` are written but **not applied to any real database**. Run both `npm run db:apply` commands (see Care Profile section above) against the real `SUPABASE_DB_URL` before the share/PDF/care-profile features are used in production, or they'll error at runtime (tables/columns don't exist yet).
 2. **Layer 1b (product-intelligence pages, `/products/[slug]`)** — not started. No `products.ts` existed anywhere in this repo's history, and the ~40 curated treatments need either real product-label data (I can research and cite this, per the same approach used for comparisons) or data you supply directly. Held pending your call.
 3. **Referral system** — skipped per the spec's own "don't over-build" guidance: no existing referral gate to hook into, and granting Premium time is billing-adjacent logic I couldn't verify without live Stripe/Supabase credentials in this environment.
 4. **Dutch (`/nl/schema`) pages** — not retrofitted with the citations/reviewer-schema pattern added to EN schedules and guides.
