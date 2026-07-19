@@ -51,7 +51,9 @@ comfort:z.string().max(300).optional()
 export const houseLogisticsSchema=z.object({
 whereThingsLive:z.string().max(500).optional(),
 houseRules:z.string().max(500).optional(),
-otherPets:z.string().max(300).optional()
+otherPets:z.string().max(300).optional(),
+vetName:z.string().max(120).optional(),
+vetPhone:z.string().max(60).optional()
 }).partial();
 
 // Kept separate from houseLogistics: household-security-sensitive fields

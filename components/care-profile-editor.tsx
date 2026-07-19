@@ -84,6 +84,8 @@ return <div>
 </Section>
 
 <Section title="House & logistics">
+<Field label="Vet — name/clinic" value={p.house_logistics.vetName||''} onChange={v=>setSection('house_logistics','vetName',v)}/>
+<Field label="Vet — phone (emergency contact)" value={p.house_logistics.vetPhone||''} onChange={v=>setSection('house_logistics','vetPhone',v)}/>
 <Area label="Where things live" value={p.house_logistics.whereThingsLive||''} onChange={v=>setSection('house_logistics','whereThingsLive',v)} placeholder="Leash by the front door, meds in the kitchen drawer"/>
 <Area label="House rules" value={p.house_logistics.houseRules||''} onChange={v=>setSection('house_logistics','houseRules',v)}/>
 <Area label="Other pets in the home" value={p.house_logistics.otherPets||''} onChange={v=>setSection('house_logistics','otherPets',v)}/>
