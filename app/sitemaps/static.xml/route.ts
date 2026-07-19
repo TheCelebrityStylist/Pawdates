@@ -1,1 +1,1 @@
-import {xml,url} from '@/lib/sitemap';export function GET(){return xml(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['','/#pricing','/terms','/privacy','/app/login','/blog','/schedules','/guides'].map(path=>url(path)).join('')}</urlset>`)}
+import {xml,url} from '@/lib/sitemap';export function GET(){return xml(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['','/#pricing','/terms','/privacy','/app/login','/blog','/schedules','/guides','/compare','/about'].map(path=>url(path)).join('')}</urlset>`)}

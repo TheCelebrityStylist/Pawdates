@@ -2,10 +2,10 @@ import fs from 'node:fs';import path from 'node:path';
 const root=path.join(process.cwd(),'.next/server/app');const read=file=>fs.readFileSync(file,'utf8');const text=html=>html.replace(/<script[\s\S]*?<\/script>/g,' ').replace(/<style[\s\S]*?<\/style>/g,' ').replace(/<[^>]+>/g,' ').replace(/&[^;]+;/g,' ').replace(/\s+/g,' ').trim();const count=(html,needle)=>(html.match(new RegExp(needle,'g'))||[]).length;const failures=[];
 const listDir=(dir,pathPrefix)=>fs.readdirSync(path.join(root,dir)).filter(name=>name.endsWith('.html')&&name!=='index.html').map(name=>({path:`${pathPrefix}/${name.slice(0,-5)}`,file:path.join(root,dir,name)}));
 
-const english=listDir('schedules','/schedules');const dutch=listDir('nl/schema','/nl/schema');const guides=listDir('guides','/guides');
-if(english.length!==24)failures.push(`Expected 24 English schedules, found ${english.length}`);if(dutch.length!==6)failures.push(`Expected 6 Dutch schedules, found ${dutch.length}`);if(guides.length!==3)failures.push(`Expected 3 life-stage guides, found ${guides.length}`);
+const english=listDir('schedules','/schedules');const dutch=listDir('nl/schema','/nl/schema');const guides=listDir('guides','/guides');const compare=listDir('compare','/compare');
+if(english.length!==24)failures.push(`Expected 24 English schedules, found ${english.length}`);if(dutch.length!==6)failures.push(`Expected 6 Dutch schedules, found ${dutch.length}`);if(guides.length!==3)failures.push(`Expected 3 life-stage guides, found ${guides.length}`);if(compare.length!==2)failures.push(`Expected 2 comparison pages, found ${compare.length}`);
 
-for(const page of [...english,...dutch,...guides]){const html=read(page.file);const words=text(html).split(/\s+/).length;const rows=count(html,'<tr');const faqs=count(html,'<details');const jsonLd=count(html,'<script type="application/ld\\+json"');const hrefs=[...html.matchAll(/href="([^"]+)"/g)].map(match=>match[1]);
+for(const page of [...english,...dutch,...guides,...compare]){const html=read(page.file);const words=text(html).split(/\s+/).length;const rows=count(html,'<tr');const faqs=count(html,'<details');const jsonLd=count(html,'<script type="application/ld\\+json"');const hrefs=[...html.matchAll(/href="([^"]+)"/g)].map(match=>match[1]);
 if(words<350)failures.push(`${page.path}: ${words} visible words`);
 if(rows<5)failures.push(`${page.path}: fewer than 4 table rows`);
 if(faqs<3)failures.push(`${page.path}: fewer than 3 FAQs`);
@@ -13,12 +13,13 @@ if(jsonLd!==1)failures.push(`${page.path}: expected one connected JSON-LD graph,
 if(!html.includes(`rel="canonical" href="https://www.tailtend.com${page.path}"`))failures.push(`${page.path}: self-canonical missing`);
 if(page.path.startsWith('/schedules/')&&(hrefs.filter(h=>h.startsWith('/blog/')).length<2||hrefs.filter(h=>h.startsWith('/schedules/')).length<2||hrefs.filter(h=>h.includes('#pricing')).length!==1))failures.push(`${page.path}: internal-link gate failed`);
 if(page.path.startsWith('/guides/')&&(hrefs.filter(h=>h.startsWith('/blog/')).length<2||hrefs.filter(h=>h.startsWith('/guides/')).length<2||hrefs.filter(h=>h==='/app').length<1))failures.push(`${page.path}: internal-link gate failed`);
+if(page.path.startsWith('/compare/')&&(hrefs.filter(h=>h.startsWith('/compare/')).length<1||hrefs.filter(h=>h==='/app').length<1))failures.push(`${page.path}: internal-link gate failed`);
 if(page.path.startsWith('/nl/')&&(!html.includes('hrefLang="en"')||!html.includes('hrefLang="nl"')||!html.includes('hrefLang="x-default"')))failures.push(`${page.path}: hreflang set incomplete`)}
 
 const blogDir=path.join(root,'blog');const blogs=fs.readdirSync(blogDir).filter(name=>name.endsWith('.html')).map(name=>({path:`/blog/${name.slice(0,-5)}`,file:path.join(blogDir,name)}));
-const content=[...english,...dutch,...guides,...blogs];
-const allHtml=[read(path.join(root,'schedules.html')),read(path.join(root,'blog.html')),read(path.join(root,'nl.html')),read(path.join(root,'guides.html')),...content.map(page=>read(page.file))].join('\n');
+const content=[...english,...dutch,...guides,...compare,...blogs];
+const allHtml=[read(path.join(root,'schedules.html')),read(path.join(root,'blog.html')),read(path.join(root,'nl.html')),read(path.join(root,'guides.html')),read(path.join(root,'compare.html')),...content.map(page=>read(page.file))].join('\n');
 for(const page of content){const escaped=page.path.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const inlinks=count(allHtml,`href="${escaped}"`);if(inlinks<2)failures.push(`${page.path}: only ${inlinks} internal inlink(s)`)}
 
 if(failures.length){console.error(failures.join('\n'));process.exit(1)}
-console.log(`SEO gate passed: ${english.length} EN schedules, ${dutch.length} NL schedules, ${guides.length} guides, ${content.length} content pages; no gated orphans.`);
+console.log(`SEO gate passed: ${english.length} EN schedules, ${dutch.length} NL schedules, ${guides.length} guides, ${compare.length} comparisons, ${content.length} content pages; no gated orphans.`);
