@@ -1,4 +1,4 @@
-export type Guide={slug:string;species:string;title:string;query:string;updated:string;intro:string;rows:{when:string;interval:string;what:string}[];why:string;missed:string;caveat:string;guide:string;faq:{q:string;a:string}[];blogs:string[];siblings:string[]};
+export type Guide={slug:string;species:string;title:string;query:string;updated:string;intro:string;rows:{when:string;interval:string;what:string}[];why:string;missed:string;caveat:string;guide:string;faq:{q:string;a:string}[];blogs:string[];siblings:string[];citationTags:string};
 const updated='2026-07-19';
 
 export const guides:Guide[]=[
@@ -22,7 +22,8 @@ faq:[
 {q:'Is the 12–16 week socialisation window really that strict?',a:'Behaviourists treat it as a sensitive period rather than a hard cutoff — exposure after it is still valuable, but is generally considered less effective at shaping lifelong temperament.'},
 {q:'When should I ask about neutering?',a:'Timing varies significantly by breed size and individual health, and recommendations have shifted in recent years, particularly for larger breeds — this is a conversation to have with your vet around the 6-month mark rather than a fixed date to follow.'}],
 blogs:['dog-vaccination-schedule','annual-pet-care-costs'],
-siblings:['kitten-first-year-schedule','senior-dog-care-schedule']},
+siblings:['kitten-first-year-schedule','senior-dog-care-schedule'],
+citationTags:'vaccination worming'},
 
 {slug:'kitten-first-year-schedule',species:'Kitten',title:'Kitten first year schedule',query:'kitten first year schedule',updated,
 intro:'A kitten’s first year moves through vaccination courses, a fast-changing worming rhythm, a socialisation window, and a neutering decision — usually inside twelve months that also include the biggest jump in size and behaviour a cat will ever go through. This guide lays the year out in order so a new kitten owner can see what is coming next.',
@@ -43,7 +44,8 @@ faq:[
 {q:'Why does the socialisation window close so early for kittens?',a:'It is generally considered to close earlier than a puppy’s, which is why breeders and shelters concentrate handling and exposure before a kitten is typically rehomed at 8–12 weeks.'},
 {q:'What if my kitten came from an unknown background?',a:'Treat the vaccination and worming history as unknown and let your vet restart or adjust the course — do not assume any prior treatment happened on schedule.'}],
 blogs:['cat-vaccination-schedule','how-often-worm-cat'],
-siblings:['puppy-first-year-schedule','senior-dog-care-schedule']},
+siblings:['puppy-first-year-schedule','senior-dog-care-schedule'],
+citationTags:'vaccination worming'},
 
 {slug:'senior-dog-care-schedule',species:'Senior dog',title:'Senior dog care schedule',query:'senior dog care schedule',updated,
 intro:'A dog does not become "senior" on a single birthday — the transition depends heavily on breed and size, with giant breeds reaching senior status years before small breeds. This guide covers what changes once a dog crosses into that stage: more frequent vet visits, a closer eye on weight and mobility, and medication or supplement reviews that a once-a-year check-up can miss.',
@@ -64,7 +66,8 @@ faq:[
 {q:'Why twice-yearly visits instead of annual?',a:'Six months is roughly how long many age-related conditions can progress from early-stage to harder-to-manage without being noticed day to day at home.'},
 {q:'Is weight gain or weight loss more concerning in a senior dog?',a:'Both are worth flagging to a vet — unexplained change in either direction can signal something worth investigating rather than being dismissed as normal ageing.'}],
 blogs:['annual-pet-care-costs','dog-vaccination-schedule'],
-siblings:['puppy-first-year-schedule','kitten-first-year-schedule']}
+siblings:['puppy-first-year-schedule','kitten-first-year-schedule'],
+citationTags:'senior checkup dental'}
 ];
 
 export const guide=(slug:string)=>guides.find(item=>item.slug===slug);
