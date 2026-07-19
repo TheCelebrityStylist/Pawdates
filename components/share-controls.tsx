@@ -9,5 +9,5 @@ if(!state.length)return <p className="mt-2 text-sm text-black/60">Add a pet to g
 return <div className="mt-3 space-y-4">{state.map(pet=><div key={pet.id} className="border-t border-black/10 pt-3 first:border-t-0 first:pt-0">
 <div className="flex items-center justify-between"><span className="font-medium">{pet.name}</span><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={pet.share_enabled} disabled={busy===pet.id} onChange={e=>toggle(pet.id,e.target.checked)}/>Share link</label></div>
 {pet.share_enabled&&<div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-black/60"><span className="break-all">{appUrl}/share/{pet.share_token}</span><button type="button" className="text-clay" disabled={busy===pet.id} onClick={()=>toggle(pet.id,true,true)}>Revoke &amp; get new link</button></div>}
-<a className="mt-2 inline-block text-sm text-clay" href={`/api/pets/${pet.id}/record.pdf`}>Download PDF record</a>
+<div className="mt-2 flex gap-4"><a className="text-sm text-clay" href={`/app/pets/${pet.id}/care-profile`}>Edit care profile</a><a className="text-sm text-clay" href={`/api/pets/${pet.id}/record.pdf`}>Download PDF record</a></div>
 </div>)}</div>}
