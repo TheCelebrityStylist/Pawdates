@@ -17,9 +17,15 @@ if(page.path.startsWith('/compare/')&&(hrefs.filter(h=>h.startsWith('/compare/')
 if(page.path.startsWith('/nl/')&&(!html.includes('hrefLang="en"')||!html.includes('hrefLang="nl"')||!html.includes('hrefLang="x-default"')))failures.push(`${page.path}: hreflang set incomplete`)}
 
 const blogDir=path.join(root,'blog');const blogs=fs.readdirSync(blogDir).filter(name=>name.endsWith('.html')).map(name=>({path:`/blog/${name.slice(0,-5)}`,file:path.join(blogDir,name)}));
+// Tool pages are dynamic (they read searchParams) and emit no static .html
+// file, so they can only be link *targets* here, not readable sources.
+const toolSlugs=['pet-age-calculator','vaccination-schedule-generator','flea-worming-cost-calculator','is-my-pet-treatment-overdue'];
+const toolPaths=toolSlugs.map(slug=>`/tools/${slug}`);
+const aboutPages=[{path:'/about',file:path.join(root,'about.html')},{path:'/about/veterinary-reviewer',file:path.join(root,'about','veterinary-reviewer.html')}];
 const content=[...english,...dutch,...guides,...compare,...blogs];
-const allHtml=[read(path.join(root,'schedules.html')),read(path.join(root,'blog.html')),read(path.join(root,'nl.html')),read(path.join(root,'guides.html')),read(path.join(root,'compare.html')),...content.map(page=>read(page.file))].join('\n');
-for(const page of content){const escaped=page.path.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const inlinks=count(allHtml,`href="${escaped}"`);if(inlinks<2)failures.push(`${page.path}: only ${inlinks} internal inlink(s)`)}
+const allHtml=[read(path.join(root,'schedules.html')),read(path.join(root,'blog.html')),read(path.join(root,'nl.html')),read(path.join(root,'guides.html')),read(path.join(root,'compare.html')),read(path.join(root,'tools.html')),...content.map(page=>read(page.file)),...aboutPages.map(page=>read(page.file))].join('\n');
+for(const page of [...content,...aboutPages]){const escaped=page.path.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const inlinks=count(allHtml,`href="${escaped}"`);if(inlinks<2)failures.push(`${page.path}: only ${inlinks} internal inlink(s)`)}
+for(const toolPath of toolPaths){const escaped=toolPath.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const inlinks=count(allHtml,`href="${escaped}"`);if(inlinks<2)failures.push(`${toolPath}: only ${inlinks} internal inlink(s)`)}
 
 if(failures.length){console.error(failures.join('\n'));process.exit(1)}
 console.log(`SEO gate passed: ${english.length} EN schedules, ${dutch.length} NL schedules, ${guides.length} guides, ${compare.length} comparisons, ${content.length} content pages; no gated orphans.`);
