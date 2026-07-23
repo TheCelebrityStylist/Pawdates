@@ -1,0 +1,1 @@
+import {compares} from '@/content/compare';import {xml,url} from '@/lib/sitemap';export function GET(){return xml(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${compares.map(item=>url(`/compare/${item.slug}`,item.updated)).join('')}</urlset>`)}

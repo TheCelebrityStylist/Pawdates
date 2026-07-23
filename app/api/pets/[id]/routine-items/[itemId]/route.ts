@@ -1,0 +1,3 @@
+import {z} from 'zod';import {sessionProfile} from '@/lib/access';import {fail,ok} from '@/lib/http';
+
+export async function DELETE(_req:Request,{params}:{params:Promise<{id:string;itemId:string}>}){try{const session=await sessionProfile();if(!session)return fail('unauthorized','Sign in required',401);const {itemId}=await params;if(!z.string().uuid().safeParse(itemId).success)return fail('invalid_id','Invalid routine item');const {error}=await session.client.from('routine_items').delete().eq('id',itemId);if(error)return fail('delete_failed',error.message,400);return ok({deleted:true})}catch(e){return fail('invalid_request',e instanceof Error?e.message:'Invalid request',400)}}

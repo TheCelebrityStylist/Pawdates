@@ -1,0 +1,1 @@
+import {guides} from '@/content/guides';import {xml,url} from '@/lib/sitemap';export function GET(){return xml(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${guides.map(item=>url(`/guides/${item.slug}`,item.updated)).join('')}</urlset>`)}
