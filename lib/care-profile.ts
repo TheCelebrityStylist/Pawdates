@@ -74,6 +74,17 @@ tricks:z.string().max(300).optional(),
 goodDayLooksLike:z.string().max(300).optional()
 }).partial();
 
+// Owner-recorded only — never diagnosed or inferred by the app.
+export const medicalSchema=z.object({
+conditions:z.string().max(500).optional(),
+allergies:z.string().max(500).optional(),
+medications:z.string().max(500).optional(),
+vaccinationHistory:z.string().max(500).optional(),
+pastProcedures:z.string().max(500).optional(),
+emergencyVetName:z.string().max(120).optional(),
+emergencyVetPhone:z.string().max(60).optional()
+}).partial();
+
 export type Feeding=z.infer<typeof feedingSchema>;
 export type RoutineNotes=z.infer<typeof routineNotesSchema>;
 export type ToiletHygiene=z.infer<typeof toiletHygieneSchema>;
@@ -81,6 +92,30 @@ export type Behaviour=z.infer<typeof behaviourSchema>;
 export type HouseLogistics=z.infer<typeof houseLogisticsSchema>;
 export type HouseAccess=z.infer<typeof houseAccessSchema>;
 export type PlayEnrichment=z.infer<typeof playEnrichmentSchema>;
+export type Medical=z.infer<typeof medicalSchema>;
+
+export const identitySchema=z.object({
+sex:z.enum(['male','female','unknown']).optional(),
+neutered:z.boolean().optional(),
+microchipNumber:z.string().max(40).optional(),
+microchipRegistry:z.string().max(120).optional(),
+passportNumber:z.string().max(60).optional(),
+colourMarkings:z.string().max(200).optional(),
+insuranceProvider:z.string().max(120).optional(),
+insurancePolicy:z.string().max(120).optional(),
+origin:z.string().max(200).optional(),
+heightCm:z.number().positive().max(300).optional(),
+bodyCondition:z.string().max(200).optional(),
+coatType:z.string().max(120).optional(),
+groomingIntervalDays:z.number().int().positive().max(365).optional(),
+rabiesVaccinatedAt:z.string().date().optional()
+}).partial();
+export type Identity=z.infer<typeof identitySchema>;
+
+export const observationTags=['scratching','limping','off_food','great_energy','other'] as const;
+export type ObservationTag=(typeof observationTags)[number];
+export const observationTagLabel:Record<ObservationTag,string>={scratching:'Scratching',limping:'Limping',off_food:'Off her food',great_energy:'Great energy',other:'Other'};
+export const observationSchema=z.object({tag:z.enum(observationTags),note:z.string().max(500).optional()});
 
 export const careProfileSchema=z.object({
 essentialsFlag:z.string().max(280).optional(),
@@ -92,6 +127,7 @@ behaviour:behaviourSchema.optional(),
 houseLogistics:houseLogisticsSchema.optional(),
 houseAccess:houseAccessSchema.optional(),
 playEnrichment:playEnrichmentSchema.optional(),
+medical:medicalSchema.optional(),
 houseAccessShared:z.boolean().optional(),
 liveCheckoffEnabled:z.boolean().optional()
 });

@@ -3,6 +3,8 @@ import {useEffect,useMemo,useState} from 'react';import Image from 'next/image';
 import {daysUntil,protectionSegments,protectionStatus,type TreatmentLite} from '@/lib/protection';
 import {completeness,type CompletenessInput} from '@/lib/completeness';
 import {pickSuggestion} from '@/lib/suggestions';
+import {ObservationLog} from './observation-log';
+import {SeasonalAlert} from './seasonal-alert';
 import type {LifeEvent} from '@/app/app/page';
 import type {Behaviour,Feeding,HouseAccess,HouseLogistics,PlayEnrichment,RoutineNotes,ToiletHygiene} from '@/lib/care-profile';
 
@@ -131,6 +133,7 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 </div>
 </section>
 
+<SeasonalAlert petName={pet.name} species={pet.species} careProfile={profile}/>
 <StatusHeadline petName={pet.name} treatments={petTreatments}/>
 <ProtectionBar treatments={petTreatments}/>
 
@@ -140,6 +143,8 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 
 <LifeStrip pet={pet} events={lifeEventsByPet[pet.id]||[]} treatmentCount={treatmentCountByPet[pet.id]||0} onTimePercent={onTimeByPet[pet.id]??null}/>
 
-<div className="mt-10 flex flex-wrap gap-4 border-t border-[var(--rule)] pt-6"><a href={`/app/pets/${pet.id}/edit`} className="mono text-[var(--health)]">Edit {pet.name}</a><a href={`/app/pets/${pet.id}/care-profile`} className="mono text-[var(--health)]">Care profile</a><button type="button" className="mono text-[var(--health)]" onClick={()=>pets.length&&!premium?setPaywall('second_pet'):location.assign('/app/onboarding')}>Add a pet</button></div>
+<ObservationLog petId={pet.id}/>
+
+<div className="mt-10 flex flex-wrap gap-4 border-t border-[var(--rule)] pt-6"><a href={`/app/pets/${pet.id}/edit`} className="mono text-[var(--health)]">Edit {pet.name}</a><a href={`/app/pets/${pet.id}/care-profile`} className="mono text-[var(--health)]">Care profile</a><a href={`/app/pets/${pet.id}/travel-check`} className="mono text-[var(--health)]">EU travel check</a><button type="button" className="mono text-[var(--health)]" onClick={()=>pets.length&&!premium?setPaywall('second_pet'):location.assign('/app/onboarding')}>Add a pet</button></div>
 
 </div>{paywall&&<PaywallSheet trigger={paywall} petName={pets[1]?.name||'Luna'} onClose={()=>setPaywall(null)}/>}</main>}

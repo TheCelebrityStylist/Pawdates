@@ -1,12 +1,12 @@
 'use client';
-import {useState} from 'react';import type {Behaviour,Feeding,HouseAccess,HouseLogistics,PlayEnrichment,RoutineCategory,RoutineNotes,ToiletHygiene} from '@/lib/care-profile';import {routineCategories} from '@/lib/care-profile';
+import {useState} from 'react';import type {Behaviour,Feeding,HouseAccess,HouseLogistics,Medical,PlayEnrichment,RoutineCategory,RoutineNotes,ToiletHygiene} from '@/lib/care-profile';import {routineCategories} from '@/lib/care-profile';
 
 type Profile={
-essentials_flag:string|null;forbidden_foods:string[];feeding:Feeding;routine_notes:RoutineNotes;toilet_hygiene:ToiletHygiene;behaviour:Behaviour;house_logistics:HouseLogistics;house_access:HouseAccess;play_enrichment:PlayEnrichment;house_access_shared:boolean;live_checkoff_enabled:boolean
+essentials_flag:string|null;forbidden_foods:string[];feeding:Feeding;routine_notes:RoutineNotes;toilet_hygiene:ToiletHygiene;behaviour:Behaviour;house_logistics:HouseLogistics;house_access:HouseAccess;play_enrichment:PlayEnrichment;medical:Medical;house_access_shared:boolean;live_checkoff_enabled:boolean
 }|null;
 type RoutineItem={id:string;time:string;label:string;category:RoutineCategory;sitter_can_check:boolean};
 
-const empty:NonNullable<Profile>={essentials_flag:'',forbidden_foods:[],feeding:{},routine_notes:{},toilet_hygiene:{},behaviour:{},house_logistics:{},house_access:{},play_enrichment:{},house_access_shared:false,live_checkoff_enabled:false};
+const empty:NonNullable<Profile>={essentials_flag:'',forbidden_foods:[],feeding:{},routine_notes:{},toilet_hygiene:{},behaviour:{},house_logistics:{},house_access:{},play_enrichment:{},medical:{},house_access_shared:false,live_checkoff_enabled:false};
 
 function Field({label,value,onChange,placeholder}:{label:string;value:string;onChange:(v:string)=>void;placeholder?:string}){return <label className="mt-3 block text-sm"><span className="text-black/60">{label}</span><input className="mt-1 w-full rounded-lg border border-black/15 px-3 py-2" value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/></label>}
 function Area({label,value,onChange,placeholder}:{label:string;value:string;onChange:(v:string)=>void;placeholder?:string}){return <label className="mt-3 block text-sm"><span className="text-black/60">{label}</span><textarea className="mt-1 w-full rounded-lg border border-black/15 px-3 py-2" rows={2} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/></label>}
@@ -22,9 +22,9 @@ const [saving,setSaving]=useState(false);
 const [saved,setSaved]=useState(false);
 
 function set<K extends keyof NonNullable<Profile>>(key:K,value:NonNullable<Profile>[K]){setP(v=>({...v,[key]:value}))}
-function setSection<S extends 'feeding'|'routine_notes'|'toilet_hygiene'|'behaviour'|'house_logistics'|'house_access'|'play_enrichment'>(section:S,key:string,value:string){setP(v=>({...v,[section]:{...v[section],[key]:value}}))}
+function setSection<S extends 'feeding'|'routine_notes'|'toilet_hygiene'|'behaviour'|'house_logistics'|'house_access'|'play_enrichment'|'medical'>(section:S,key:string,value:string){setP(v=>({...v,[section]:{...v[section],[key]:value}}))}
 
-async function save(){setSaving(true);setSaved(false);try{const forbiddenFoods=foodsText.split(',').map(s=>s.trim()).filter(Boolean);const r=await fetch(`/api/pets/${petId}/care-profile`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({essentialsFlag:p.essentials_flag||undefined,forbiddenFoods,feeding:p.feeding,routineNotes:p.routine_notes,toiletHygiene:p.toilet_hygiene,behaviour:p.behaviour,houseLogistics:p.house_logistics,houseAccess:p.house_access,playEnrichment:p.play_enrichment,houseAccessShared:p.house_access_shared,liveCheckoffEnabled:p.live_checkoff_enabled})});if(r.ok)setSaved(true)}finally{setSaving(false)}}
+async function save(){setSaving(true);setSaved(false);try{const forbiddenFoods=foodsText.split(',').map(s=>s.trim()).filter(Boolean);const r=await fetch(`/api/pets/${petId}/care-profile`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({essentialsFlag:p.essentials_flag||undefined,forbiddenFoods,feeding:p.feeding,routineNotes:p.routine_notes,toiletHygiene:p.toilet_hygiene,behaviour:p.behaviour,houseLogistics:p.house_logistics,houseAccess:p.house_access,playEnrichment:p.play_enrichment,medical:p.medical,houseAccessShared:p.house_access_shared,liveCheckoffEnabled:p.live_checkoff_enabled})});if(r.ok)setSaved(true)}finally{setSaving(false)}}
 
 async function addItem(){if(!newItem.label.trim())return;const r=await fetch(`/api/pets/${petId}/routine-items`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(newItem)});if(r.ok){const json=await r.json();setItems(v=>[...v,json.item]);setNewItem({time:'08:00',label:'',category:'meal',sitterCanCheck:false})}}
 async function removeItem(id:string){setItems(v=>v.filter(i=>i.id!==id));await fetch(`/api/pets/${petId}/routine-items/${id}`,{method:'DELETE'})}
@@ -99,6 +99,17 @@ return <div>
 <Field label="Backup contact — name" value={p.house_access.backupContactName||''} onChange={v=>setSection('house_access','backupContactName',v)}/>
 <Field label="Backup contact — phone" value={p.house_access.backupContactPhone||''} onChange={v=>setSection('house_access','backupContactPhone',v)}/>
 <label className="mt-4 flex items-center justify-between rounded-lg border border-black/10 p-3 text-sm"><span>Include house-access notes on the share link</span><input type="checkbox" checked={p.house_access_shared} onChange={e=>set('house_access_shared',e.target.checked)}/></label>
+</Section>
+
+<Section title="Medical — owner-recorded, never a diagnosis">
+<p className="mt-2 text-sm text-black/60">This is your own record, in your own words. Tailtend never interprets it — always call the vet for anything medical.</p>
+<Area label="Known conditions" value={p.medical.conditions||''} onChange={v=>setSection('medical','conditions',v)}/>
+<Area label="Allergies" value={p.medical.allergies||''} onChange={v=>setSection('medical','allergies',v)}/>
+<Area label="Current medications & your dose notes" value={p.medical.medications||''} onChange={v=>setSection('medical','medications',v)}/>
+<Area label="Vaccination history" value={p.medical.vaccinationHistory||''} onChange={v=>setSection('medical','vaccinationHistory',v)}/>
+<Area label="Past procedures" value={p.medical.pastProcedures||''} onChange={v=>setSection('medical','pastProcedures',v)}/>
+<Field label="Emergency vet — name/clinic" value={p.medical.emergencyVetName||''} onChange={v=>setSection('medical','emergencyVetName',v)}/>
+<Field label="Emergency vet — phone" value={p.medical.emergencyVetPhone||''} onChange={v=>setSection('medical','emergencyVetPhone',v)}/>
 </Section>
 
 <Section title="Play & enrichment">
