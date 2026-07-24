@@ -145,6 +145,6 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 
 <ObservationLog petId={pet.id}/>
 
-<div className="mt-10 flex flex-wrap gap-4 border-t border-[var(--rule)] pt-6"><a href={`/app/pets/${pet.id}/edit`} className="mono text-[var(--health)]">Edit {pet.name}</a><a href={`/app/pets/${pet.id}/care-profile`} className="mono text-[var(--health)]">Care profile</a><a href={`/app/pets/${pet.id}/travel-check`} className="mono text-[var(--health)]">EU travel check</a><button type="button" className="mono text-[var(--health)]" onClick={()=>pets.length&&!premium?setPaywall('second_pet'):location.assign('/app/onboarding')}>Add a pet</button></div>
+<div className="mt-10 flex flex-wrap gap-4 border-t border-[var(--rule)] pt-6"><a href={`/app/pets/${pet.id}/edit`} className="mono text-[var(--health)]">Edit {pet.name}</a><a href={`/app/pets/${pet.id}/care-profile`} className="mono text-[var(--health)]">Care profile</a><a href={`/app/pets/${pet.id}/weight`} className="mono text-[var(--health)]">Weight trend</a><a href={`/app/pets/${pet.id}/travel-check`} className="mono text-[var(--health)]">EU travel check</a><a href="/app/settings" className="mono text-[var(--health)]">Share &amp; export</a><button type="button" className="mono text-[var(--health)]" onClick={()=>pets.length&&!premium?setPaywall('second_pet'):location.assign('/app/onboarding')}>Add a pet</button></div>
 
 </div>{paywall&&<PaywallSheet trigger={paywall} petName={pets[1]?.name||'Luna'} onClose={()=>setPaywall(null)}/>}</main>}
