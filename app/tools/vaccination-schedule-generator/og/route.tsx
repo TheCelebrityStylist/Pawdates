@@ -1,0 +1,5 @@
+import {ImageResponse} from 'next/og';
+export const runtime='edge';
+export async function GET(request:Request){const {searchParams}=new URL(request.url);const species=searchParams.get('species')==='cat'?'cat':'dog';const name=searchParams.get('name')||'Your';const birth=searchParams.get('birth');
+const headline=birth?`${name}'s ${species} vaccination schedule`:'Vaccination schedule generator for puppies and kittens';
+return new ImageResponse(<div style={{width:'100%',height:'100%',display:'flex',flexDirection:'column',justifyContent:'space-between',background:'#F7F2E9',color:'#22303C',padding:70,fontFamily:'sans-serif'}}><div style={{fontFamily:'monospace',fontSize:24,letterSpacing:3,textTransform:'uppercase',color:'#2F7D5B'}}>Tailtend · Vaccination schedule</div><div style={{fontSize:60,fontWeight:800,lineHeight:1.1,maxWidth:1050}}>{headline}</div><div style={{display:'flex',justifyContent:'space-between',borderTop:'2px solid rgba(34,48,60,.18)',paddingTop:25,fontFamily:'monospace',fontSize:22}}><span>Real calendar dates, first-year course</span><span>tailtend.com</span></div></div>,{width:1200,height:630})}

@@ -1,0 +1,1 @@
+import {xml,url} from '@/lib/sitemap';const slugs=['is-my-pet-treatment-overdue','vaccination-schedule-generator','pet-age-calculator','flea-worming-cost-calculator'];export function GET(){return xml(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${slugs.map(slug=>url(`/tools/${slug}`)).join('')}</urlset>`)}
