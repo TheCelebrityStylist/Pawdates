@@ -24,7 +24,14 @@ if(body.bodyCondition!==undefined)patch.body_condition=body.bodyCondition;
 if(body.coatType!==undefined)patch.coat_type=body.coatType;
 if(body.groomingIntervalDays!==undefined)patch.grooming_interval_days=body.groomingIntervalDays;
 if(body.rabiesVaccinatedAt!==undefined)patch.rabies_vaccinated_at=body.rabiesVaccinatedAt;
-if(Object.keys(patch).length){const {error}=await session.client.from('pets').update(patch).eq('id',id);if(error)return fail('save_failed',error.message,400)}
+if(Object.keys(patch).length){
+const {error}=await session.client.from('pets').update(patch).eq('id',id);
+if(error&&error.code==='42703'){
+const corePatch:Record<string,unknown>={};
+if(patch.birth_date!==undefined)corePatch.birth_date=patch.birth_date;
+if(patch.weight_kg!==undefined)corePatch.weight_kg=patch.weight_kg;
+if(Object.keys(corePatch).length){const {error:coreError}=await session.client.from('pets').update(corePatch).eq('id',id);if(coreError)return fail('save_failed',coreError.message,400)}
+}else if(error)return fail('save_failed',error.message,400)}
 if(body.logWeight&&body.weightKg!==undefined){const {error}=await session.client.from('weight_log').upsert({pet_id:id,user_id:session.user.id,recorded_at:new Date().toISOString().slice(0,10),weight_kg:body.weightKg},{onConflict:'pet_id,recorded_at'});if(error)return fail('save_failed',error.message,400)}
 return ok({updated:true})
 }catch(e){return fail('invalid_request',e instanceof Error?e.message:'Invalid request',400)}
