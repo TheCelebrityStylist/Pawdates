@@ -63,6 +63,7 @@ export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){
 try{
 const session=await sessionProfile();if(!session)return fail('unauthorized','Sign in required',401);
 const {id}=await params;if(!z.string().uuid().safeParse(id).success)return fail('invalid_id','Invalid pet');
+if(!session.premium)return fail('premium_required','Premium is required for the vet-visit sheet',402);
 const {data:pet,error:petError}=await session.client.from('pets').select('id,name,species,share_token,share_enabled').eq('id',id).single();
 if(petError||!pet)return fail('not_found','Pet not found',404);
 const [{data:treatments},{data:profile},{data:routineItems}]=await Promise.all([

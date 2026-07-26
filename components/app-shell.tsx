@@ -1,10 +1,11 @@
 'use client';
-import {useEffect,useMemo,useState} from 'react';import Image from 'next/image';import {Logo} from './logo';import {PaywallSheet,type PaywallTrigger} from './paywall-sheet';
+import {useEffect,useMemo,useState} from 'react';import Image from 'next/image';import {useRouter} from 'next/navigation';import {Logo} from './logo';import {PaywallSheet,type PaywallTrigger} from './paywall-sheet';
 import {daysUntil,protectionSegments,protectionStatus,type TreatmentLite} from '@/lib/protection';
 import {completeness,type CompletenessInput} from '@/lib/completeness';
 import {pickSuggestion} from '@/lib/suggestions';
 import {ObservationLog} from './observation-log';
 import {SeasonalAlert} from './seasonal-alert';
+import {MilestoneAdd} from './milestone-add';
 import type {LifeEvent} from '@/app/app/page';
 import type {Behaviour,Feeding,HouseAccess,HouseLogistics,PlayEnrichment,RoutineNotes,ToiletHygiene} from '@/lib/care-profile';
 
@@ -65,7 +66,7 @@ return <div className="mt-8 border-t border-[var(--rule)] pt-5"><button type="bu
 
 function LifeStrip({pet,events,treatmentCount,onTimePercent}:{pet:Pet;events:LifeEvent[];treatmentCount:number;onTimePercent:number|null}){
 const daysTracked=Math.max(0,Math.round((Date.now()-new Date(pet.created_at).getTime())/86400000));
-return <section className="mt-10"><p className="mono text-[var(--ink-60)]">You&apos;ve kept {pet.name}&apos;s record for {daysTracked} day{daysTracked===1?'':'s'} · {treatmentCount} treatment{treatmentCount===1?'':'s'}{onTimePercent!==null?` · ${onTimePercent}% on time`:''}</p>{events.length>0&&<div className="mt-4 space-y-3">{events.map(e=><div className="flex items-center justify-between border-b border-dashed border-[var(--rule)] pb-3 text-sm" key={e.id}><div><b>{e.label}</b><p className="mono mt-1 text-[var(--ink-60)]">{e.detail}</p></div><span className="mono text-[var(--ink-60)]">{new Date(e.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</span></div>)}</div>}</section>;
+return <section className="mt-10"><p className="mono text-[var(--ink-60)]">You&apos;ve kept {pet.name}&apos;s record for {daysTracked} day{daysTracked===1?'':'s'} · {treatmentCount} treatment{treatmentCount===1?'':'s'}{onTimePercent!==null?` · ${onTimePercent}% on time`:''}</p>{events.length>0&&<div className="mt-4 space-y-3">{events.map(e=><div className="flex items-center gap-3 border-b border-dashed border-[var(--rule)] pb-3 text-sm" key={e.id}>{e.photoUrl&&<span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg"><Image src={e.photoUrl} alt="" fill sizes="40px" className="object-cover"/></span>}<div className="min-w-0 flex-1"><b>{e.label}</b><p className="mono mt-1 text-[var(--ink-60)]">{e.detail}</p></div><span className="mono shrink-0 text-[var(--ink-60)]">{new Date(e.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</span></div>)}</div>}</section>;
 }
 
 export function AppShell({email,pets,treatments,profiles,premium,lifeEventsByPet,latestWeightByPet,latestVisitByPet,treatmentCountByPet,onTimeByPet,initialNotice=''}:{
@@ -81,6 +82,7 @@ treatmentCountByPet:Record<string,number>;
 onTimeByPet:Record<string,number|null>;
 initialNotice?:string;
 }){
+const router=useRouter();
 const [selectedId,setSelectedId]=useState(pets[0]?.id||'');
 const [allTreatments,setAllTreatments]=useState(treatments);
 const [stamped,setStamped]=useState<string|null>(null);
@@ -142,9 +144,10 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 <CompletenessDisclosure percent={percent} items={items}/>
 
 <LifeStrip pet={pet} events={lifeEventsByPet[pet.id]||[]} treatmentCount={treatmentCountByPet[pet.id]||0} onTimePercent={onTimeByPet[pet.id]??null}/>
+<MilestoneAdd petId={pet.id} onAdded={()=>router.refresh()}/>
 
 <ObservationLog petId={pet.id}/>
 
-<div className="mt-10 flex flex-wrap gap-4 border-t border-[var(--rule)] pt-6"><a href={`/app/pets/${pet.id}/edit`} className="mono text-[var(--health)]">Edit {pet.name}</a><a href={`/app/pets/${pet.id}/care-profile`} className="mono text-[var(--health)]">Care profile</a><a href={`/app/pets/${pet.id}/travel-check`} className="mono text-[var(--health)]">EU travel check</a><button type="button" className="mono text-[var(--health)]" onClick={()=>pets.length&&!premium?setPaywall('second_pet'):location.assign('/app/onboarding')}>Add a pet</button></div>
+<div className="mt-10 flex flex-wrap gap-4 border-t border-[var(--rule)] pt-6"><a href={`/app/pets/${pet.id}/edit`} className="mono text-[var(--health)]">Edit {pet.name}</a><a href={`/app/pets/${pet.id}/care-profile`} className="mono text-[var(--health)]">Care profile</a><a href={`/app/pets/${pet.id}/weight`} className="mono text-[var(--health)]">Weight trend</a><a href={`/app/pets/${pet.id}/travel-check`} className="mono text-[var(--health)]">EU travel check</a><a href="/app/settings" className="mono text-[var(--health)]">Share &amp; export</a><button type="button" className="mono text-[var(--health)]" onClick={()=>pets.length&&!premium?setPaywall('second_pet'):location.assign('/app/onboarding')}>Add a pet</button></div>
 
 </div>{paywall&&<PaywallSheet trigger={paywall} petName={pets[1]?.name||'Luna'} onClose={()=>setPaywall(null)}/>}</main>}
