@@ -20,13 +20,17 @@ if(days<=3)return {status:'soon',treatmentName:nearest.name,days,dateLabel:dayLa
 return {status:'ok',treatmentName:nearest.name,days,dateLabel:dayLabel(nearest.next_due)};
 }
 
-export type Segment={type:string;label:string;nextDue:string;status:Status};
+export type Segment={type:string;label:string;nextDue:string;status:Status;widthPercent:number};
+
+const barScaleDays=90;
 
 // One segment per treatment type present on the record, for the horizontal
 // protection bar. Status thresholds match protectionStatus so the bar and
-// the headline never disagree.
+// the headline never disagree. Width is proportional to days-until-due
+// (clamped to a shared 90-day scale) rather than an equal split, so marking
+// a treatment done visibly EXTENDS its segment instead of just recoloring it.
 export function protectionSegments(treatments:TreatmentLite[]):Segment[]{
 const byType=new Map<string,TreatmentLite>();
 for(const t of treatments){const existing=byType.get(t.type);if(!existing||daysUntil(t.next_due)<daysUntil(existing.next_due))byType.set(t.type,t)}
-return [...byType.values()].sort((a,b)=>daysUntil(a.next_due)-daysUntil(b.next_due)).map(t=>{const days=daysUntil(t.next_due);const status:Status=days<0?'overdue':days<=3?'soon':'ok';return {type:t.type,label:t.name,nextDue:t.next_due,status}});
+return [...byType.values()].sort((a,b)=>daysUntil(a.next_due)-daysUntil(b.next_due)).map(t=>{const days=daysUntil(t.next_due);const status:Status=days<0?'overdue':days<=3?'soon':'ok';const widthPercent=Math.max(6,Math.min(100,(days/barScaleDays)*100));return {type:t.type,label:t.name,nextDue:t.next_due,status,widthPercent}});
 }

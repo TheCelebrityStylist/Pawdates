@@ -47,7 +47,7 @@ return <p className="mt-4 text-2xl">{petName} is fully protected until {status.d
 function ProtectionBar({treatments}:{treatments:TreatmentLite[]}){
 const segments=protectionSegments(treatments);
 if(!segments.length)return null;
-return <div className="mt-5"><div className="flex h-2 overflow-hidden rounded-full border border-[var(--rule)]">{segments.map(s=><div key={s.type} className="flex-1 transition-all duration-500" style={{background:s.status==='overdue'?'var(--stamp)':s.status==='soon'?'#D8B24C':'var(--health)'}} title={`${s.label}: ${s.status}`}/>)}</div><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">{segments.map(s=><span className="mono text-xs text-[var(--ink-60)]" key={s.type}>{s.label}</span>)}</div></div>;
+return <div className="mt-5 space-y-2">{segments.map(s=><div key={s.type}><div className="flex items-center justify-between"><span className="mono text-xs text-[var(--ink-60)]">{s.label}</span></div><div className="mt-1 h-2 overflow-hidden rounded-full border border-[var(--rule)]" style={{background:'rgba(34,48,60,.05)'}}><div className="h-full rounded-full transition-[width] duration-700 ease-out" style={{width:`${s.widthPercent}%`,background:s.status==='overdue'?'var(--stamp)':s.status==='soon'?'#D8B24C':'var(--health)'}} title={`${s.label}: ${s.status}`}/></div></div>)}</div>;
 }
 
 function TodayAction({pet,treatments,suggestion,onDone,stamped}:{pet:Pet;treatments:TreatmentLite[];suggestion:{text:string;href:string}|null;onDone:(t:TreatmentLite)=>void;stamped:string|null}){
