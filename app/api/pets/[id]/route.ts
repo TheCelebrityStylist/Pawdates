@@ -16,8 +16,6 @@ if(body.microchipNumber!==undefined)patch.microchip_number=body.microchipNumber;
 if(body.microchipRegistry!==undefined)patch.microchip_registry=body.microchipRegistry;
 if(body.passportNumber!==undefined)patch.passport_number=body.passportNumber;
 if(body.colourMarkings!==undefined)patch.colour_markings=body.colourMarkings;
-if(body.insuranceProvider!==undefined)patch.insurance_provider=body.insuranceProvider;
-if(body.insurancePolicy!==undefined)patch.insurance_policy=body.insurancePolicy;
 if(body.origin!==undefined)patch.origin=body.origin;
 if(body.heightCm!==undefined)patch.height_cm=body.heightCm;
 if(body.bodyCondition!==undefined)patch.body_condition=body.bodyCondition;
