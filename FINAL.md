@@ -1,5 +1,92 @@
 # Growth Layer + Care Profile — FINAL
 
+## Life-admin layer (Phase B — this pass)
+
+Three first-class tables, gated green (typecheck / lint / build / SEO). **Apply
+migration `0015_life_admin.sql`** before use (it also creates a private
+`pet-documents` storage bucket). The pet edit page degrades to empty sections if
+it isn't applied yet.
+
+```
+npm run db:apply supabase/migrations/0015_life_admin.sql
+```
+
+**Shipped:** `insurance_policies` (provider, policy number, coverage summary,
+renewal date, private file reference), `providers` (typed vet/groomer/sitter/
+walker/boarding directory), `emergency_info` (one row per pet). All household-RLS
+scoped. Idempotent backfills move insurance out of `pets.insurance_*` columns and
+emergency vet/backup-contact out of `pet_profile` JSONB — app code no longer reads
+or writes those old locations (the pets columns are left inert/deprecated, not
+dropped). Full CRUD API + UI sections on the pet edit page; a printable
+`/app/pets/[id]/emergency` sheet; policy documents in a **private** bucket served
+via short-lived signed URLs (never public).
+
+**Share-scope enforcement (spec item 6):** the reveal matrix in `lib/share-links.ts`
+sets `insurance` and `providers` to `true` for `full` **only** — a `medical` or
+`sitter` link can never expose policy numbers or the provider directory (the
+recipient view doesn't even fetch them off-scope). `emergency` is `true` for all
+scopes on purpose: anyone trusted with any link should be able to reach help.
+
+**Not verified against a live DB this pass:** no `.env.local`/`SUPABASE_DB_URL`
+and the Supabase MCP still needs interactive OAuth unavailable in this
+non-interactive session, so the create-policy/provider/emergency → full-vs-sitter
+share check was not run live — see the session report.
+
+**Still remaining (explicitly out of scope this pass):** expenses, nutrition_plans,
+grooming_schedule (as tables), polymorphic reminders, ES/DE/PT locales.
+
+---
+
+## Scoped share links (Phase D — this pass)
+
+The sitter-link feature graduated from two per-pet boolean toggles
+(`pets.share_token` / `pets.vet_share_token`) into a full `share_links` system.
+Shipped and gated green (typecheck / lint / build / SEO). **Not** applied to any
+live database yet — apply migration `0014_share_links.sql` before the feature is
+used in production, or the settings section and `/s/[token]` routes will find no
+table (the settings page already degrades to "no links" rather than crashing):
+
+```
+npm run db:apply supabase/migrations/0014_share_links.sql
+```
+
+**What shipped:**
+- `share_links` (scope `full`/`medical`/`sitter`, `expires_at`, `view_count`,
+  `created_by`, `revoked_at`) + `share_link_access_log`, both with household-scoped
+  RLS matching the 0011/0012 convention. A pet can now hold any number of links,
+  each scoped, expiring, and revocable independently.
+- `record_share_access()` — a `security definer` RPC the logged-out recipient view
+  calls (service role) to bump the view count and log access atomically.
+- `lib/share-links.ts` — scope definitions plus a single reveal matrix so scope is
+  enforced in exactly one place, not scattered across the render.
+- API: `POST`/`GET /api/pets/[id]/share-links`, `PATCH`/`DELETE /api/share-links/[linkId]`
+  (create, list, re-limit expiry, soft-revoke). Sharing stays Premium-gated, same as
+  the existing `/api/pets/[id]/share`.
+- `/s/[token]` — one recipient page rendering only the sections its scope allows;
+  clean "expired"/"revoked" pages instead of a 404; "Powered by Tailtend" footer;
+  noindex. Live check-off works from the new tokens too.
+- Owner dashboard (`components/share-link-manager.tsx`, in Settings): mint scoped
+  links, copy, see view counts + last-opened, re-limit or revoke (with confirm).
+
+**Still on the legacy path (left intact, not removed):** `/share/[token]` and
+`/vet/[token]` with their toggles remain wired so current production links keep
+working. The new `/s/[token]` system supersedes them; a later pass can migrate
+existing enabled pets to `share_links` rows and retire the old routes.
+
+**Not covered this pass** (the broader "full product build" prompt): the remaining
+net-new life-admin tables the spec lists as separate entities — `pet_documents`,
+dedicated `insurance_policies`/`providers`/`emergency_info`/`travel_records`/
+`nutrition_plans`/`grooming_schedule`/`expenses`, a generalized `vitals_log`
+(only weight exists), a polymorphic `reminders` table (reminders are still derived
+from `treatments.next_due`), and ES/DE/PT locales (only EN/NL exist). Much of that
+functionality exists today inside `pets` columns and `pet_profile` JSONB rather
+than as first-class tables. None of the DB-dependent QA checklist (live RLS probing,
+Stripe webhook test-mode runs, end-to-end signup→share flow) could be executed
+here: no `.env.local`, no `SUPABASE_DB_URL`, and the Supabase MCP needs interactive
+OAuth unavailable in this non-interactive session.
+
+---
+
 Status as of this pass: Layers 1a, 1c, 2, 3, 5 shipped and gated green. Layer 1b (product pages) not started — blocked on a decision (see below). Layer 4 partial — share link + PDF shipped, referral system deliberately skipped. The Care Profile (sitter handover) feature is also shipped — see its own section below. Not merged to `main`; everything is on `claude/tailtend-baseline-execution-6zdah9` / PR #4.
 
 ## Care Profile (sitter handover record)

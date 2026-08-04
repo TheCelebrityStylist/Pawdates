@@ -1,7 +1,7 @@
 'use client';
 import {useRef,useState} from 'react';import {useRouter} from 'next/navigation';import Image from 'next/image';
 
-type Pet={id:string;name:string;birth_date:string|null;weight_kg:number|null;photo_path:string|null;sex:'male'|'female'|'unknown'|null;neutered:boolean|null;microchip_number:string|null;microchip_registry:string|null;passport_number:string|null;colour_markings:string|null;insurance_provider:string|null;insurance_policy:string|null;origin:string|null;height_cm:number|null;body_condition:string|null;coat_type:string|null;grooming_interval_days:number|null;rabies_vaccinated_at:string|null};
+type Pet={id:string;name:string;birth_date:string|null;weight_kg:number|null;photo_path:string|null;sex:'male'|'female'|'unknown'|null;neutered:boolean|null;microchip_number:string|null;microchip_registry:string|null;passport_number:string|null;colour_markings:string|null;origin:string|null;height_cm:number|null;body_condition:string|null;coat_type:string|null;grooming_interval_days:number|null;rabies_vaccinated_at:string|null};
 
 function Field({label,value,onChange,placeholder}:{label:string;value:string;onChange:(v:string)=>void;placeholder?:string}){return <label className="mt-3 block text-sm"><span className="text-black/60">{label}</span><input className="mt-1 w-full rounded-lg border border-black/15 px-3 py-2" value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/></label>}
 
@@ -18,8 +18,6 @@ const [microchipNumber,setMicrochipNumber]=useState(pet.microchip_number||'');
 const [microchipRegistry,setMicrochipRegistry]=useState(pet.microchip_registry||'');
 const [passportNumber,setPassportNumber]=useState(pet.passport_number||'');
 const [colourMarkings,setColourMarkings]=useState(pet.colour_markings||'');
-const [insuranceProvider,setInsuranceProvider]=useState(pet.insurance_provider||'');
-const [insurancePolicy,setInsurancePolicy]=useState(pet.insurance_policy||'');
 const [origin,setOrigin]=useState(pet.origin||'');
 const [heightCm,setHeightCm]=useState(pet.height_cm?String(pet.height_cm):'');
 const [bodyCondition,setBodyCondition]=useState(pet.body_condition||'');
@@ -33,7 +31,7 @@ const [saved,setSaved]=useState(false);
 
 async function uploadPhoto(file:File){setUploading(true);setError('');try{const form=new FormData();form.append('photo',file);const r=await fetch(`/api/pets/${pet.id}/photo`,{method:'POST',body:form});const json=await r.json();if(!r.ok)throw new Error(json.error?.message||'Upload failed');setPreview(json.photoUrl);router.refresh()}catch(e){setError(e instanceof Error?e.message:'Upload failed')}finally{setUploading(false)}}
 
-async function save(){setSaving(true);setError('');setSaved(false);try{const r=await fetch(`/api/pets/${pet.id}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({birthDate:birthDate||undefined,weightKg:weight?Number(weight):undefined,logWeight:!!weight,sex,neutered,microchipNumber:microchipNumber||undefined,microchipRegistry:microchipRegistry||undefined,passportNumber:passportNumber||undefined,colourMarkings:colourMarkings||undefined,insuranceProvider:insuranceProvider||undefined,insurancePolicy:insurancePolicy||undefined,origin:origin||undefined,heightCm:heightCm?Number(heightCm):undefined,bodyCondition:bodyCondition||undefined,coatType:coatType||undefined,groomingIntervalDays:groomingIntervalDays?Number(groomingIntervalDays):undefined,rabiesVaccinatedAt:rabiesVaccinatedAt||undefined})});if(!r.ok)throw new Error('Could not save');setSaved(true);router.refresh()}catch(e){setError(e instanceof Error?e.message:'Could not save')}finally{setSaving(false)}}
+async function save(){setSaving(true);setError('');setSaved(false);try{const r=await fetch(`/api/pets/${pet.id}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({birthDate:birthDate||undefined,weightKg:weight?Number(weight):undefined,logWeight:!!weight,sex,neutered,microchipNumber:microchipNumber||undefined,microchipRegistry:microchipRegistry||undefined,passportNumber:passportNumber||undefined,colourMarkings:colourMarkings||undefined,origin:origin||undefined,heightCm:heightCm?Number(heightCm):undefined,bodyCondition:bodyCondition||undefined,coatType:coatType||undefined,groomingIntervalDays:groomingIntervalDays?Number(groomingIntervalDays):undefined,rabiesVaccinatedAt:rabiesVaccinatedAt||undefined})});if(!r.ok)throw new Error('Could not save');setSaved(true);router.refresh()}catch(e){setError(e instanceof Error?e.message:'Could not save')}finally{setSaving(false)}}
 
 return <div className="mt-8">
 <div className="flex items-center gap-5">
@@ -58,8 +56,6 @@ return <div className="mt-8">
 <Field label="Microchip registry" value={microchipRegistry} onChange={setMicrochipRegistry}/>
 <Field label="Passport number" value={passportNumber} onChange={setPassportNumber}/>
 <Field label="Colour / markings" value={colourMarkings} onChange={setColourMarkings}/>
-<Field label="Insurance provider" value={insuranceProvider} onChange={setInsuranceProvider}/>
-<Field label="Insurance policy number" value={insurancePolicy} onChange={setInsurancePolicy}/>
 <Field label="Breeder / shelter of origin" value={origin} onChange={setOrigin}/>
 <label className="mt-3 block text-sm"><span className="text-black/60">Height (cm)</span><input type="number" step="0.1" min="0" className="mt-1 w-full rounded-lg border border-black/15 px-3 py-2" value={heightCm} onChange={e=>setHeightCm(e.target.value)}/></label>
 <Field label="Body-condition note" value={bodyCondition} onChange={setBodyCondition}/>
