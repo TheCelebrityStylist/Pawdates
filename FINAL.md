@@ -1,5 +1,42 @@
 # Growth Layer + Care Profile — FINAL
 
+## Life-admin layer (Phase B — this pass)
+
+Three first-class tables, gated green (typecheck / lint / build / SEO). **Apply
+migration `0015_life_admin.sql`** before use (it also creates a private
+`pet-documents` storage bucket). The pet edit page degrades to empty sections if
+it isn't applied yet.
+
+```
+npm run db:apply supabase/migrations/0015_life_admin.sql
+```
+
+**Shipped:** `insurance_policies` (provider, policy number, coverage summary,
+renewal date, private file reference), `providers` (typed vet/groomer/sitter/
+walker/boarding directory), `emergency_info` (one row per pet). All household-RLS
+scoped. Idempotent backfills move insurance out of `pets.insurance_*` columns and
+emergency vet/backup-contact out of `pet_profile` JSONB — app code no longer reads
+or writes those old locations (the pets columns are left inert/deprecated, not
+dropped). Full CRUD API + UI sections on the pet edit page; a printable
+`/app/pets/[id]/emergency` sheet; policy documents in a **private** bucket served
+via short-lived signed URLs (never public).
+
+**Share-scope enforcement (spec item 6):** the reveal matrix in `lib/share-links.ts`
+sets `insurance` and `providers` to `true` for `full` **only** — a `medical` or
+`sitter` link can never expose policy numbers or the provider directory (the
+recipient view doesn't even fetch them off-scope). `emergency` is `true` for all
+scopes on purpose: anyone trusted with any link should be able to reach help.
+
+**Not verified against a live DB this pass:** no `.env.local`/`SUPABASE_DB_URL`
+and the Supabase MCP still needs interactive OAuth unavailable in this
+non-interactive session, so the create-policy/provider/emergency → full-vs-sitter
+share check was not run live — see the session report.
+
+**Still remaining (explicitly out of scope this pass):** expenses, nutrition_plans,
+grooming_schedule (as tables), polymorphic reminders, ES/DE/PT locales.
+
+---
+
 ## Scoped share links (Phase D — this pass)
 
 The sitter-link feature graduated from two per-pet boolean toggles
