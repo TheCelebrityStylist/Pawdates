@@ -1,5 +1,35 @@
 # Growth Layer + Care Profile — FINAL
 
+## Live-DB fix + Phase C (daily care) — this pass
+
+**Migration order to apply against production (Supabase SQL editor):** run
+`0016_consolidate_household_and_life_admin.sql` first (idempotent catch-up for
+0005→0015 — fixes the "function household_read_scope does not exist" error, which
+proved the tracked migrations were never applied to the live DB), then
+`0017_daily_care.sql`. Both are safe to re-run.
+
+**Phase C shipped:** `expenses` (+ private receipts), `nutrition_plans` (one per
+pet), `grooming_schedule`. Grooming reuses the treatments reminder engine — a
+generated `next_due` column plus a UNION into `due_reminder_digest`, so grooming
+rides the same daily reminder email, not a parallel system. Household RLS on all
+three; backfills from `pet_profile.feeding` and `pets.grooming_interval_days`.
+Scope matrix: **expenses = full only**; **nutrition + grooming = full + sitter**
+(a sitter needs feeding + grooming); neither on medical.
+
+**Verified on a local Postgres 16** seeded to the live core-only state (the exact
+state that broke 0014): 0016 then 0017 apply clean and idempotent; RLS isolates
+households at the database level (cross-household reads return 0, viewer writes
+rejected); grooming's generated `next_due` computes; and `due_reminder_digest`
+returns treatments and grooming together. The reveal matrix + link status were
+asserted from source. NOTE: the actual production DB was not reachable from the
+build session (no direct URL; the Supabase MCP authenticates but its DB socket
+returns ECONNREFUSED) — production QA still requires applying 0016/0017 there.
+
+**Still explicitly out of scope:** a polymorphic `reminders` table (grooming
+instead reuses the existing treatments engine) and ES/DE/PT locales.
+
+---
+
 ## Life-admin layer (Phase B — this pass)
 
 Three first-class tables, gated green (typecheck / lint / build / SEO). **Apply
