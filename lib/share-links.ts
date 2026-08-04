@@ -37,14 +37,19 @@ export const shareScopeReveals: Record<ShareScope, {
   emergency: boolean;   // emergency contact / vet / care instructions — a sitter and a vet both need these
   insurance: boolean;   // financial life-admin — FULL scope only, never medical or sitter
   providers: boolean;   // provider directory (vet/groomer/sitter/…) — FULL scope only
+  nutrition: boolean;   // feeding plan — a sitter genuinely needs this, so FULL + SITTER
+  grooming: boolean;    // grooming routine — a sitter needs this too, so FULL + SITTER
+  expenses: boolean;    // financial ledger — FULL scope only, same tier as insurance
 }> = {
   // Emergency info is exposed in every scope on purpose: whoever holds any link
-  // to a pet should be able to reach help in an emergency. Insurance and the
-  // provider directory are deliberately FULL-only — a medical-only or sitter link
-  // must never leak policy numbers or the household's service contacts.
-  sitter: {identity: true, essentials: true, feeding: true, routine: true, behaviour: true, treatments: false, medicalHistory: false, weight: false, observations: false, contact: true, emergency: true, insurance: false, providers: false},
-  medical: {identity: true, essentials: false, feeding: false, routine: false, behaviour: false, treatments: true, medicalHistory: true, weight: true, observations: true, contact: true, emergency: true, insurance: false, providers: false},
-  full: {identity: true, essentials: true, feeding: true, routine: true, behaviour: true, treatments: true, medicalHistory: true, weight: true, observations: true, contact: true, emergency: true, insurance: true, providers: true},
+  // to a pet should be able to reach help in an emergency. Insurance, expenses
+  // and the provider directory are deliberately FULL-only — a medical-only or
+  // sitter link must never leak financial data or the household's service
+  // contacts. Nutrition and grooming ARE on sitter links, because a sitter
+  // genuinely needs the feeding plan and grooming routine to take over.
+  sitter: {identity: true, essentials: true, feeding: true, routine: true, behaviour: true, treatments: false, medicalHistory: false, weight: false, observations: false, contact: true, emergency: true, insurance: false, providers: false, nutrition: true, grooming: true, expenses: false},
+  medical: {identity: true, essentials: false, feeding: false, routine: false, behaviour: false, treatments: true, medicalHistory: true, weight: true, observations: true, contact: true, emergency: true, insurance: false, providers: false, nutrition: false, grooming: false, expenses: false},
+  full: {identity: true, essentials: true, feeding: true, routine: true, behaviour: true, treatments: true, medicalHistory: true, weight: true, observations: true, contact: true, emergency: true, insurance: true, providers: true, nutrition: true, grooming: true, expenses: true},
 };
 
 export type ShareLink = {
