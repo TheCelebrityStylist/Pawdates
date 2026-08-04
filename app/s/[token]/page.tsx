@@ -4,6 +4,7 @@ import {headers} from 'next/headers';
 import {admin} from '@/lib/supabase';
 import {linkStatus, shareScopeReveals, shareScopeLabel, type ShareLink, type ShareScope} from '@/lib/share-links';
 import {observationTagLabel, goodWithLabel, type Behaviour, type Feeding, type HouseLogistics, type Medical, type ObservationTag, type PlayEnrichment, type RoutineNotes, type ToiletHygiene} from '@/lib/care-profile';
+import {providerTypeLabel, type EmergencyInfo, type InsurancePolicy, type Provider} from '@/lib/life-admin';
 import {SitterCheckoff} from '@/components/sitter-checkoff';
 
 export const dynamic = 'force-dynamic';
@@ -131,6 +132,21 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
     return {...i, checked: !!check, checkedBy: check?.checked_by, checkedAt: check?.checked_at};
   });
 
+  // Life-admin: emergency shows on every scope; insurance + providers are FULL only
+  // (enforced by the reveal matrix — a medical or sitter link never fetches them).
+  const [{data: emergencyRow}, {data: policies}, {data: providers}] = await Promise.all([
+    reveals.emergency ? db.from('emergency_info').select('*').eq('pet_id', pet.id).maybeSingle() : Promise.resolve({data: null}),
+    reveals.insurance ? db.from('insurance_policies').select('id,provider,policy_number,coverage_summary,renewal_date').eq('pet_id', pet.id).order('created_at', {ascending: false}) : Promise.resolve({data: null}),
+    reveals.providers ? db.from('providers').select('id,type,name,phone,email,notes').eq('pet_id', pet.id).order('type').order('name') : Promise.resolve({data: null}),
+  ]);
+  const emergency = (emergencyRow || null) as EmergencyInfo | null;
+  // Prefer the dedicated emergency_info record; fall back to the older JSONB fields.
+  const vetName = emergency?.vet_name || medical.emergencyVetName || houseLogistics.vetName || '';
+  const vetPhone = emergency?.vet_phone || medical.emergencyVetPhone || houseLogistics.vetPhone || '';
+  const emergencyContactName = emergency?.emergency_contact_name || '';
+  const emergencyContactPhone = emergency?.emergency_contact_phone || '';
+  const careInstructions = emergency?.care_instructions || '';
+
   const modeLabel = scope === 'sitter' ? 'Sitter mode' : scope === 'medical' ? 'Medical record' : 'Full record';
 
   return (
@@ -165,16 +181,16 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
 
         {reveals.contact && (
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {houseLogistics.vetName && (
+            {vetName && (
               <div className="ledger-row">
-                <div><b>Vet</b><p className="mono mt-1 text-[var(--ink-60)]">{houseLogistics.vetName}</p></div>
-                {houseLogistics.vetPhone && <a className="btn ghost" href={`tel:${houseLogistics.vetPhone}`}>Call</a>}
+                <div><b>Vet</b><p className="mono mt-1 text-[var(--ink-60)]">{vetName}</p></div>
+                {vetPhone && <a className="btn ghost" href={`tel:${vetPhone}`}>Call</a>}
               </div>
             )}
-            {medical.emergencyVetName && (
+            {(emergencyContactName || emergencyContactPhone) && (
               <div className="ledger-row">
-                <div><b>Emergency vet</b><p className="mono mt-1 text-[var(--ink-60)]">{medical.emergencyVetName}</p></div>
-                {medical.emergencyVetPhone && <a className="btn ghost" href={`tel:${medical.emergencyVetPhone}`}>Call</a>}
+                <div><b>Emergency contact</b><p className="mono mt-1 text-[var(--ink-60)]">{emergencyContactName || emergencyContactPhone}</p></div>
+                {emergencyContactPhone && <a className="btn ghost" href={`tel:${emergencyContactPhone}`}>Call</a>}
               </div>
             )}
             {reveals.essentials && nextMed && (
@@ -189,6 +205,13 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
                 <span className="mono">{(feeding.feedingTimes || []).join(' · ')}</span>
               </div>
             )}
+          </div>
+        )}
+
+        {reveals.emergency && careInstructions && (
+          <div className="mt-5 rounded-lg border border-[var(--rule)] p-4">
+            <p className="mono text-sm text-[var(--ink-60)]">In an emergency</p>
+            <p className="mt-1 whitespace-pre-wrap">{careInstructions}</p>
           </div>
         )}
 
@@ -336,6 +359,41 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
               </div>
             ))}
           </div>
+        </section>
+      )}
+
+      {reveals.insurance && (policies || []).length > 0 && (
+        <section className="card mt-6 p-6 md:p-8">
+          <h2 className="text-2xl">Insurance</h2>
+          {((policies || []) as Pick<InsurancePolicy, 'id' | 'provider' | 'policy_number' | 'coverage_summary' | 'renewal_date'>[]).map((p) => (
+            <div className="ledger-row" key={p.id}>
+              <div>
+                <b>{p.provider}</b>
+                {p.policy_number && <p className="mono mt-1 text-[var(--ink-60)]">Policy {p.policy_number}</p>}
+                {p.coverage_summary && <p className="muted mt-1 text-sm">{p.coverage_summary}</p>}
+              </div>
+              {p.renewal_date && <span className="mono text-[var(--ink-60)]">Renews {fmt(p.renewal_date)}</span>}
+            </div>
+          ))}
+        </section>
+      )}
+
+      {reveals.providers && (providers || []).length > 0 && (
+        <section className="card mt-6 p-6 md:p-8">
+          <h2 className="text-2xl">Providers</h2>
+          {((providers || []) as Pick<Provider, 'id' | 'type' | 'name' | 'phone' | 'email' | 'notes'>[]).map((p) => (
+            <div className="ledger-row" key={p.id}>
+              <div>
+                <b>{p.name}</b>
+                <p className="mono mt-1 text-[var(--ink-60)]">{providerTypeLabel[p.type]}</p>
+                {p.notes && <p className="muted mt-1 text-sm">{p.notes}</p>}
+              </div>
+              <div className="text-right text-sm">
+                {p.phone && <a className="block underline" href={`tel:${p.phone}`}>{p.phone}</a>}
+                {p.email && <a className="block underline" href={`mailto:${p.email}`}>{p.email}</a>}
+              </div>
+            </div>
+          ))}
         </section>
       )}
 
