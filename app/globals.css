@@ -24,9 +24,12 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body),sans-serif;font-size:17px;line-height:1.65}
-/* Heavier-stock feel: a warm tonal wash + a faint fibrous noise, pure CSS. */
-body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(120% 80% at 50% -10%, rgba(169,124,47,.05), transparent 60%),radial-gradient(100% 60% at 50% 110%, rgba(22,35,59,.05), transparent 60%)}
-body:after{content:"";position:fixed;inset:0;z-index:99;pointer-events:none;opacity:.05;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+/* Heavier-stock feel: a warm tonal wash + a faint fibrous noise, pure CSS.
+   Both layers sit BEHIND content (z-index:-1) with no blend mode — a fixed,
+   mix-blend-mode overlay composited *over* content caused ghost/duplicated
+   text on some mobile GPUs, so the grain lives under the page instead. */
+body:before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(120% 80% at 50% -10%, rgba(169,124,47,.05), transparent 60%),radial-gradient(100% 60% at 50% 110%, rgba(22,35,59,.05), transparent 60%)}
+body:after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E")}
 a{color:inherit;text-decoration:none}
 button,input,select,textarea{font:inherit}
 h1,h2,h3{font-family:var(--font-display),Georgia,serif;font-weight:700;letter-spacing:-.008em;line-height:1.08}
