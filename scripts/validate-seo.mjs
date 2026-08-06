@@ -28,5 +28,24 @@ const allHtml=[read(path.join(root,'schedules.html')),read(path.join(root,'blog.
 for(const page of [...content,...aboutPages]){const escaped=page.path.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const inlinks=count(allHtml,`href="${escaped}"`);if(inlinks<2)failures.push(`${page.path}: only ${inlinks} internal inlink(s)`)}
 for(const toolPath of toolPaths){const escaped=toolPath.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const inlinks=count(allHtml,`href="${escaped}"`);if(inlinks<2)failures.push(`${toolPath}: only ${inlinks} internal inlink(s)`)}
 
+// Topic-cluster layer: breed pages (hubs + topics) and pillar guides.
+const breedPages=listDir('breeds','/breeds');const learnPages=listDir('learn','/learn');
+if(breedPages.length!==12)failures.push(`Expected 12 breed pages, found ${breedPages.length}`);
+if(learnPages.length!==2)failures.push(`Expected 2 pillar guides, found ${learnPages.length}`);
+for(const page of breedPages){const html=read(page.file);const words=text(html).split(/\s+/).length;const jsonLd=count(html,'<script type="application/ld\\+json"');const hrefs=[...html.matchAll(/href="([^"]+)"/g)].map(m=>m[1]);
+if(words<450)failures.push(`${page.path}: ${words} visible words (breed page)`);
+if(jsonLd!==1)failures.push(`${page.path}: expected one JSON-LD graph, found ${jsonLd}`);
+if(!html.includes(`rel="canonical" href="https://www.tailtend.com${page.path}"`))failures.push(`${page.path}: self-canonical missing`);
+if(hrefs.filter(h=>h==='/app/signup').length<1)failures.push(`${page.path}: in-app signup CTA missing`);
+if(!html.includes('hrefLang="en"')||!html.includes('hrefLang="x-default"'))failures.push(`${page.path}: hreflang incomplete`)}
+for(const page of learnPages){const html=read(page.file);const words=text(html).split(/\s+/).length;const jsonLd=count(html,'<script type="application/ld\\+json"');const hrefs=[...html.matchAll(/href="([^"]+)"/g)].map(m=>m[1]);
+if(words<1500)failures.push(`${page.path}: ${words} visible words (pillar must be 1500+)`);
+if(jsonLd!==1)failures.push(`${page.path}: expected one JSON-LD graph, found ${jsonLd}`);
+if(!html.includes(`rel="canonical" href="https://www.tailtend.com${page.path}"`))failures.push(`${page.path}: self-canonical missing`);
+if(hrefs.filter(h=>h==='/app/signup').length<1)failures.push(`${page.path}: in-app signup CTA missing`)}
+// Orphan check for the new layer (include their HTML + indexes so cross-links count).
+const clusterHtml=[allHtml,read(path.join(root,'breeds.html')),read(path.join(root,'learn.html')),...breedPages.map(p=>read(p.file)),...learnPages.map(p=>read(p.file))].join('\n');
+for(const page of [...breedPages,...learnPages]){const escaped=page.path.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const inlinks=count(clusterHtml,`href="${escaped}"`);if(inlinks<2)failures.push(`${page.path}: only ${inlinks} internal inlink(s)`)}
+
 if(failures.length){console.error(failures.join('\n'));process.exit(1)}
-console.log(`SEO gate passed: ${english.length} EN schedules, ${dutch.length} NL schedules, ${guides.length} guides, ${compare.length} comparisons, ${dutchBlog.length} NL blog posts, ${content.length} content pages; no gated orphans.`);
+console.log(`SEO gate passed: ${english.length} EN schedules, ${dutch.length} NL schedules, ${guides.length} guides, ${compare.length} comparisons, ${dutchBlog.length} NL blog posts, ${breedPages.length} breed pages, ${learnPages.length} pillar guides, ${content.length} legacy content pages; no gated orphans.`);
