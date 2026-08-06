@@ -83,6 +83,24 @@ export function nutritionHasContent(n: NutritionPlan | null | undefined) {
   return !!n && !!(n.food_brand || n.food_type || n.portion || n.meals_per_day || (n.feeding_times && n.feeding_times.length) || n.dietary_restrictions || n.notes);
 }
 
+// ── Feeding log (per-meal, reuses the "mark done" interaction) ───────────────
+export type FeedingLog = {
+  id: string;
+  pet_id: string;
+  user_id: string;
+  fed_at: string;
+  fed_by: string;
+  meal_time_slot: string;
+  fed_for_date: string;
+  notes: string | null;
+  created_at: string;
+};
+
+export const feedingInputSchema = z.object({
+  slot: z.string().trim().min(1).max(20),
+  notes: z.string().trim().max(300).optional(),
+});
+
 // ── Grooming schedule (reuses the treatments due-date engine) ────────────────
 export const groomingTasks = ['bath', 'nail_trim', 'teeth_cleaning', 'haircut', 'ear_cleaning', 'other'] as const;
 export type GroomingTask = (typeof groomingTasks)[number];
