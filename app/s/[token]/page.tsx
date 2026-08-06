@@ -1,10 +1,12 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import {notFound} from 'next/navigation';
 import {headers} from 'next/headers';
 import {admin} from '@/lib/supabase';
 import {linkStatus, shareScopeReveals, shareScopeLabel, type ShareLink, type ShareScope} from '@/lib/share-links';
 import {observationTagLabel, goodWithLabel, type Behaviour, type Feeding, type HouseLogistics, type Medical, type ObservationTag, type PlayEnrichment, type RoutineNotes, type ToiletHygiene} from '@/lib/care-profile';
 import {providerTypeLabel, type EmergencyInfo, type InsurancePolicy, type Provider} from '@/lib/life-admin';
+import {dueStatus, expenseCategoryLabel, formatMoney, groomingName, nutritionHasContent, summariseExpenses, type Expense, type Grooming, type NutritionPlan} from '@/lib/daily-care';
 import {SitterCheckoff} from '@/components/sitter-checkoff';
 
 export const dynamic = 'force-dynamic';
@@ -99,7 +101,7 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
 
   const {data: pet} = await db
     .from('pets')
-    .select('id,name,species,birth_date,weight_kg,sex,neutered,microchip_number,colour_markings,user_id')
+    .select('id,name,species,birth_date,weight_kg,sex,neutered,microchip_number,colour_markings,photo_path,user_id')
     .eq('id', shareLink.pet_id)
     .single();
   if (!pet) notFound();
@@ -134,12 +136,17 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
 
   // Life-admin: emergency shows on every scope; insurance + providers are FULL only
   // (enforced by the reveal matrix — a medical or sitter link never fetches them).
-  const [{data: emergencyRow}, {data: policies}, {data: providers}] = await Promise.all([
+  const [{data: emergencyRow}, {data: policies}, {data: providers}, {data: nutritionRow}, {data: grooming}, {data: expenses}] = await Promise.all([
     reveals.emergency ? db.from('emergency_info').select('*').eq('pet_id', pet.id).maybeSingle() : Promise.resolve({data: null}),
     reveals.insurance ? db.from('insurance_policies').select('id,provider,policy_number,coverage_summary,renewal_date').eq('pet_id', pet.id).order('created_at', {ascending: false}) : Promise.resolve({data: null}),
     reveals.providers ? db.from('providers').select('id,type,name,phone,email,notes').eq('pet_id', pet.id).order('type').order('name') : Promise.resolve({data: null}),
+    // Nutrition + grooming are on sitter AND full; expenses on full only (owner-only financials).
+    reveals.nutrition ? db.from('nutrition_plans').select('*').eq('pet_id', pet.id).maybeSingle() : Promise.resolve({data: null}),
+    reveals.grooming ? db.from('grooming_schedule').select('id,task,label,frequency_days,next_due').eq('pet_id', pet.id).order('next_due', {nullsFirst: false}) : Promise.resolve({data: null}),
+    reveals.expenses ? db.from('expenses').select('*').eq('pet_id', pet.id).order('spent_on', {ascending: false}) : Promise.resolve({data: null}),
   ]);
   const emergency = (emergencyRow || null) as EmergencyInfo | null;
+  const nutrition = (nutritionRow || null) as NutritionPlan | null;
   // Prefer the dedicated emergency_info record; fall back to the older JSONB fields.
   const vetName = emergency?.vet_name || medical.emergencyVetName || houseLogistics.vetName || '';
   const vetPhone = emergency?.vet_phone || medical.emergencyVetPhone || houseLogistics.vetPhone || '';
@@ -149,16 +156,23 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
 
   const modeLabel = scope === 'sitter' ? 'Sitter mode' : scope === 'medical' ? 'Medical record' : 'Full record';
 
+  const photoUrl = pet.photo_path ? db.storage.from('pet-photos').getPublicUrl(pet.photo_path).data.publicUrl : null;
+
   return (
     <Shell>
-      <p className="mono text-[var(--health)]">
-        {modeLabel} · read-only, shared by the owner · {shareScopeLabel[scope]}
-      </p>
+      {/* Passport masthead band — instantly says what this is to a first-time viewer. */}
+      <div className="rounded-t-xl px-5 py-3" style={{background: 'var(--ink)', color: '#EBE3D2'}}>
+        <p className="mono text-xs" style={{letterSpacing: '.2em'}}>Tailtend · Pet record</p>
+        <p className="mt-1 mono text-sm" style={{color: '#DDB870'}}>{modeLabel} · {shareScopeLabel[scope]}</p>
+      </div>
 
-      <div className="card mt-6 p-6 md:p-8">
-        <header className="flex flex-wrap items-center gap-6 border-b border-[var(--rule)] pb-6">
-          <span className="tag"><span>{pet.name[0]}</span></span>
-          <div>
+      <div className="card rounded-t-none p-6 md:p-8">
+        <header className="flex flex-wrap items-center gap-5 border-b border-[var(--rule)] pb-6">
+          <div className="passport-photo relative h-24 w-20 shrink-0">
+            {photoUrl ? <Image src={photoUrl} alt={pet.name} fill sizes="80px" className="object-cover" /> : <span className="initial text-3xl">{pet.name[0]}</span>}
+            <span className="mrz">Tailtend</span>
+          </div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-3xl">{pet.name}</h1>
             <p className="mono mt-2 text-[var(--ink-60)] capitalize">
               {pet.species}
@@ -170,6 +184,7 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
             {reveals.identity && pet.colour_markings ? <p className="mono mt-1 text-xs text-[var(--ink-60)]">{pet.colour_markings}</p> : null}
             {reveals.medicalHistory && pet.microchip_number ? <p className="mono mt-1 text-xs text-[var(--ink-60)]">Chip {pet.microchip_number}</p> : null}
           </div>
+          <span className="stamp shrink-0">Read-only</span>
         </header>
 
         {reveals.essentials && profile?.essentials_flag && (
@@ -362,6 +377,32 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
         </section>
       )}
 
+      {reveals.nutrition && nutritionHasContent(nutrition) && (
+        <section className="card mt-6 p-6 md:p-8">
+          <h2 className="text-2xl">Nutrition plan</h2>
+          {nutrition!.food_brand && <p className="muted mt-3">{nutrition!.food_type ? `${nutrition!.food_brand} — ${nutrition!.food_type}` : nutrition!.food_brand}</p>}
+          {nutrition!.portion && <p className="muted mt-2">{nutrition!.portion}{nutrition!.meals_per_day ? ` · ${nutrition!.meals_per_day}x per day` : ''}</p>}
+          {(nutrition!.feeding_times || []).length > 0 && <p className="muted mt-2"><b>Feeding times:</b> {(nutrition!.feeding_times || []).join(' · ')}</p>}
+          {nutrition!.dietary_restrictions && <p className="muted mt-2"><b>Dietary restrictions:</b> {nutrition!.dietary_restrictions}</p>}
+          {nutrition!.notes && <p className="muted mt-2">{nutrition!.notes}</p>}
+        </section>
+      )}
+
+      {reveals.grooming && (grooming || []).length > 0 && (
+        <section className="card mt-6 p-6 md:p-8">
+          <h2 className="text-2xl">Grooming</h2>
+          {((grooming || []) as Pick<Grooming, 'id' | 'task' | 'label' | 'frequency_days' | 'next_due'>[]).map((g) => {
+            const status = dueStatus(g.next_due);
+            return (
+              <div className="ledger-row" key={g.id}>
+                <div><b>{groomingName(g)}</b><p className="mono mt-1 text-[var(--ink-60)]">Every {g.frequency_days} days</p></div>
+                {status && <span className={`chip ${status.overdue ? 'overdue' : 'health'}`}>{status.text}</span>}
+              </div>
+            );
+          })}
+        </section>
+      )}
+
       {reveals.insurance && (policies || []).length > 0 && (
         <section className="card mt-6 p-6 md:p-8">
           <h2 className="text-2xl">Insurance</h2>
@@ -396,6 +437,21 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
           ))}
         </section>
       )}
+
+      {reveals.expenses && (expenses || []).length > 0 && (() => {
+        const summary = summariseExpenses((expenses || []) as Expense[]);
+        return (
+          <section className="card mt-6 p-6 md:p-8">
+            <h2 className="text-2xl">Expenses</h2>
+            {summary.categories.map((c) => (
+              <div className="ledger-row" key={`${c.category}-${c.currency}`}>
+                <b>{expenseCategoryLabel[c.category]}</b>
+                <span className="mono text-[var(--ink-60)]">{formatMoney(c.cents, c.currency)}</span>
+              </div>
+            ))}
+          </section>
+        );
+      })()}
 
       <PoweredBy />
     </Shell>

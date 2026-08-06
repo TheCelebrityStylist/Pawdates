@@ -23,6 +23,19 @@ s.from('milestones').select('pet_id,title,note,photo_path,occurred_on').in('pet_
 ]):[{data:[]},{data:[]},{data:[]},{data:[]},{data:[]},{data:[]}];
 const milestones=milestonesResult.data||[];
 
+// Daily-use data (migrations 0017/0018 may be unapplied → fall back to empty).
+const today=new Date().toISOString().slice(0,10);
+const [nutR,feedR,obsR]=petIds.length?await Promise.all([
+s.from('nutrition_plans').select('pet_id,feeding_times').in('pet_id',petIds),
+s.from('feeding_log').select('pet_id,meal_time_slot,fed_by').in('pet_id',petIds).eq('fed_for_date',today),
+s.from('observation_log').select('pet_id,created_at').in('pet_id',petIds).gte('created_at',`${today}T00:00:00`)
+]):[{data:[],error:null},{data:[],error:null},{data:[],error:null}];
+const nutritionRows=(nutR.error?[]:nutR.data||[]) as {pet_id:string;feeding_times:string[]}[];
+const feedRows=(feedR.error?[]:feedR.data||[]) as {pet_id:string;meal_time_slot:string;fed_by:string}[];
+const obsRows=(obsR.error?[]:obsR.data||[]) as {pet_id:string;created_at:string}[];
+const feedingByPet=Object.fromEntries((pets||[]).map(p=>{const times=(nutritionRows.find(n=>n.pet_id===p.id)?.feeding_times)||[];const fed=Object.fromEntries(feedRows.filter(f=>f.pet_id===p.id).map(f=>[f.meal_time_slot,f.fed_by]));return [p.id,{slots:[...times].sort(),fed}]}));
+const observedTodayByPet=Object.fromEntries((pets||[]).map(p=>[p.id,obsRows.some(o=>o.pet_id===p.id)]));
+
 const photoUrls=Object.fromEntries((pets||[]).filter(p=>p.photo_path).map(p=>[p.id,s.storage.from('pet-photos').getPublicUrl(p.photo_path!).data.publicUrl]));
 
 const lifeEventsByPet:Record<string,LifeEvent[]>={};
@@ -53,5 +66,7 @@ latestWeightByPet={latestWeightByPet}
 latestVisitByPet={latestVisitByPet}
 treatmentCountByPet={treatmentCountByPet}
 onTimeByPet={onTimeByPet}
+feedingByPet={feedingByPet}
+observedTodayByPet={observedTodayByPet}
 initialNotice={query.upgraded==='1'?'Thank you — Premium is active. Every treatment record is unlocked.':query.onboarded?`${query.onboarded}'s record is running. Next up is already on the calendar.`:''}
 />}

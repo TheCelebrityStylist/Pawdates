@@ -110,10 +110,12 @@ rabiesVaccinatedAt:z.string().date().optional()
 }).partial();
 export type Identity=z.infer<typeof identitySchema>;
 
-export const observationTags=['scratching','limping','off_food','great_energy','other'] as const;
+export const observationTags=['scratching','limping','off_food','great_energy','other','bright_day','quiet_day','off_day'] as const;
 export type ObservationTag=(typeof observationTags)[number];
-export const observationTagLabel:Record<ObservationTag,string>={scratching:'Scratching',limping:'Limping',off_food:'Off her food',great_energy:'Great energy',other:'Other'};
+export const observationTagLabel:Record<ObservationTag,string>={scratching:'Scratching',limping:'Limping',off_food:'Off her food',great_energy:'Great energy',other:'Other',bright_day:'Bright day',quiet_day:'Quiet',off_day:'Off-colour'};
 export const observationSchema=z.object({tag:z.enum(observationTags),note:z.string().max(500).optional()});
+// The three quick-tap moods offered by the daily "How was [pet] today?" prompt.
+export const dailyMoodTags=['bright_day','quiet_day','off_day'] as const;
 
 export const careProfileSchema=z.object({
 essentialsFlag:z.string().max(280).optional(),

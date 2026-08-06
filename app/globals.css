@@ -1,2 +1,104 @@
 @tailwind base;@tailwind components;@tailwind utilities;
-:root{--paper:#F7F2E9;--card:#FFFDF8;--ink:#22303C;--ink-60:rgba(34,48,60,.64);--rule:rgba(34,48,60,.14);--health:#2C7455;--stamp:#BE3D2A;--brass:#A8842C;color-scheme:light}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body),sans-serif;font-size:17px;line-height:1.7}body:after{content:"";position:fixed;inset:0;z-index:99;pointer-events:none;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E")}a{color:inherit;text-decoration:none}button,input{font:inherit}h1,h2,h3{font-family:var(--font-display),sans-serif;letter-spacing:-.02em;line-height:1.06}.mono{font-family:var(--font-mono),monospace;letter-spacing:.08em;text-transform:uppercase;font-size:.8125rem}.muted{color:var(--ink-60)}.section{padding:120px 24px;border-top:1px solid var(--rule)}.wrap{max-width:1100px;margin:auto}.card{background:var(--card);border:1px solid var(--rule);border-radius:14px;box-shadow:0 1px 2px rgba(34,48,60,.06),0 8px 24px rgba(34,48,60,.07)}.btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;padding:0 20px;font-weight:500;background:var(--health);color:#fff;border:1px solid var(--health);cursor:pointer}.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}.btn:hover{filter:brightness(.96)}.fade{opacity:0;transform:translateY(40px);transition:opacity .65s ease,transform .65s ease}.fade.in{opacity:1;transform:none}.ledger-row{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;padding:18px 0;border-bottom:1px solid var(--rule)}.tag{position:relative;display:grid;width:50px;height:50px;place-items:center;transform:rotate(45deg);border-radius:15px;background:var(--card);box-shadow:inset 0 0 0 1px var(--brass),0 3px 10px rgba(34,48,60,.1)}.tag:before{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:var(--paper);top:4px;left:4px}.tag>span{transform:rotate(-45deg);font-family:var(--font-display);font-weight:800}.stamp{display:inline-block;border:2px double currentColor;outline:1px solid currentColor;outline-offset:3px;border-radius:50%;padding:6px 13px;color:var(--stamp);font-family:var(--font-mono);font-weight:700;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;transform:rotate(-7deg);opacity:.88}.stamp.hit{animation:stamp-in .25s cubic-bezier(.2,1.4,.3,1)}@keyframes stamp-in{from{transform:rotate(-12deg) scale(1.15);opacity:.25}to{transform:rotate(-7deg) scale(1);opacity:.88}}.chip{border-radius:999px;padding:5px 9px;font-family:var(--font-mono);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;background:rgba(34,48,60,.06)}.chip.health{color:var(--health);background:rgba(47,125,91,.1)}.chip.overdue{color:var(--stamp);background:rgba(190,61,42,.1)}.perforation{position:relative;border-top:1px dashed var(--rule)}.perforation:before,.perforation:after{content:"";position:absolute;top:-7px;width:13px;height:13px;border-radius:50%;background:var(--paper);border:1px solid var(--rule)}.perforation:before{left:-7px}.perforation:after{right:-7px}.rule-input{width:100%;min-height:48px;border:0;border-bottom:1px solid var(--ink);border-radius:0;background:transparent;padding:8px 0;color:var(--ink)}:focus-visible{outline:2px solid var(--health);outline-offset:3px}@media(max-width:700px){.section{padding:72px 20px}.ledger-row{gap:10px}body{font-size:16px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}.fade{opacity:1;transform:none}}
+
+:root{
+  /* ── Passport palette ─────────────────────────────────────────────────────
+     Colour encodes status: brass = a stamp/mark, sage = valid/done/protected,
+     coral = overdue/urgent ONLY. Navy is structure & type. Do not decorate
+     with coral or sage — reserve them for their meaning. */
+  --paper:#EBE3D2;            /* manila passport stock */
+  --card:#F6F0E2;            /* raised data page */
+  --ink:#16233B;            /* deep ink-navy — primary type & structure */
+  --ink-70:rgba(22,35,59,.72);
+  --ink-60:rgba(22,35,59,.60);
+  --ink-40:rgba(22,35,59,.40);
+  --rule:rgba(22,35,59,.16);
+  --brass:#A97C2F;          /* stamp / seal ink, accents */
+  --brass-ink:#8A6A24;      /* brass for small text/links (AA on card) */
+  --sage:#4F6D57;           /* valid / done / protected */
+  --coral:#BE4133;          /* overdue / urgent only */
+  /* Aliases kept so existing components reskin from this one file. */
+  --health:var(--sage);
+  --stamp:var(--coral);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body),sans-serif;font-size:17px;line-height:1.65}
+/* Heavier-stock feel: a warm tonal wash + a faint fibrous noise, pure CSS.
+   Both layers sit BEHIND content (z-index:-1) with no blend mode — a fixed,
+   mix-blend-mode overlay composited *over* content caused ghost/duplicated
+   text on some mobile GPUs, so the grain lives under the page instead. */
+body:before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(120% 80% at 50% -10%, rgba(169,124,47,.05), transparent 60%),radial-gradient(100% 60% at 50% 110%, rgba(22,35,59,.05), transparent 60%)}
+body:after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E")}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit}
+h1,h2,h3{font-family:var(--font-display),Georgia,serif;font-weight:700;letter-spacing:-.008em;line-height:1.08}
+.mono{font-family:var(--font-mono),monospace;letter-spacing:.11em;text-transform:uppercase;font-size:.8125rem}
+.muted{color:var(--ink-60)}
+.section{padding:120px 24px;border-top:1px solid var(--rule)}
+.wrap{max-width:1100px;margin:auto}
+
+/* Raised passport page */
+.card{background:var(--card);border:1px solid var(--rule);border-radius:12px;box-shadow:0 1px 2px rgba(22,35,59,.05),0 10px 26px rgba(22,35,59,.07)}
+
+/* Primary action = navy (official). Ghost = outline. */
+.btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px;padding:0 20px;font-weight:500;background:var(--ink);color:#F6F0E2;border:1px solid var(--ink);cursor:pointer;transition:filter .15s ease,transform .05s ease}
+.btn:hover{filter:brightness(1.14)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:rgba(22,35,59,.28)}
+.btn.ghost:hover{filter:none;background:rgba(22,35,59,.05)}
+
+.fade{opacity:0;transform:translateY(40px);transition:opacity .65s ease,transform .65s ease}
+.fade.in{opacity:1;transform:none}
+
+/* ── Section rule: "immigration-desk" header — mono label + hairline ──────── */
+.rule-label{display:flex;align-items:center;gap:12px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.16em;font-size:.72rem;color:var(--ink-60)}
+.rule-label:after{content:"";flex:1;height:1px;background:var(--rule)}
+
+.ledger-row{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid var(--rule)}
+
+/* ── Passport photo box (replaces the round avatar) ──────────────────────── */
+.passport-photo{position:relative;background:var(--card);border:2px solid var(--brass);border-radius:5px;overflow:hidden;box-shadow:0 2px 8px rgba(22,35,59,.12)}
+.passport-photo:before{content:"";position:absolute;inset:4px;border:1px solid rgba(169,124,47,.45);border-radius:3px;pointer-events:none;z-index:3}
+.passport-photo .mrz{position:absolute;left:0;right:0;bottom:0;z-index:2;background:rgba(22,35,59,.72);color:#EBE3D2;font-family:var(--font-mono);font-size:.42rem;letter-spacing:.14em;text-align:center;padding:2px 0;text-transform:uppercase}
+.passport-photo .initial{display:grid;place-items:center;width:100%;height:100%;font-family:var(--font-display);font-weight:700;color:var(--brass)}
+
+/* ── Status seal / ring (replaces the flat progress bar) ─────────────────── */
+.seal{--pct:0%;--sc:var(--brass);position:relative;display:grid;place-items:center;width:104px;height:104px;border-radius:50%;background:radial-gradient(circle at 50% 50%, var(--card) 0 55%, transparent 56%),conic-gradient(var(--sc) var(--pct), rgba(22,35,59,.12) 0)}
+.seal:before{content:"";position:absolute;inset:9px;border-radius:50%;border:1.5px double var(--sc);opacity:.8}
+.seal:after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px dotted var(--sc);opacity:.42}
+.seal .num{font-family:var(--font-display);font-weight:700;font-size:1.5rem;color:var(--ink);line-height:1}
+.seal .cap{font-family:var(--font-mono);font-size:.55rem;letter-spacing:.14em;color:var(--ink-60);margin-top:2px}
+.seal.valid{--sc:var(--sage)}
+.seal.overdue{--sc:var(--coral)}
+
+/* ── Visa stamp — how every earned record entry renders ──────────────────── */
+.visa{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;aspect-ratio:1/1;padding:6px 4px;text-align:center;color:var(--brass);border:2px solid currentColor;border-radius:9px;box-shadow:inset 0 0 0 1px currentColor;background:radial-gradient(120% 120% at 30% 25%, rgba(169,124,47,.07), transparent 70%);font-family:var(--font-mono);transform:rotate(var(--rot,-4deg));transition:transform .15s ease}
+.visa:hover{transform:rotate(0deg) scale(1.03)}
+.visa.valid{color:var(--sage)}
+.visa.overdue{color:var(--coral)}
+.visa .glyph{font-size:1.15rem;line-height:1}
+.visa .lbl{font-size:.55rem;letter-spacing:.05em;text-transform:uppercase;line-height:1.08;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.visa .dt{font-size:.52rem;letter-spacing:.08em;opacity:.78}
+
+/* ── Ink stamp (small oval mark, e.g. "Done · today") + landing animation ── */
+.stamp{display:inline-flex;align-items:center;gap:6px;border:2px solid currentColor;box-shadow:inset 0 0 0 1px currentColor;border-radius:999px;padding:5px 13px;color:var(--sage);font-family:var(--font-mono);font-weight:700;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;transform:rotate(-6deg);opacity:.92}
+.stamp.overdue{color:var(--coral)}
+.stamp.hit{animation:stamp-land .34s cubic-bezier(.2,1.25,.3,1)}
+@keyframes stamp-land{0%{transform:rotate(-17deg) scale(1.7);opacity:0}55%{transform:rotate(-4deg) scale(.92);opacity:1}100%{transform:rotate(-6deg) scale(1);opacity:.92}}
+
+.chip{border-radius:999px;padding:5px 9px;font-family:var(--font-mono);font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;background:rgba(22,35,59,.07);color:var(--ink-70)}
+.chip.health{color:var(--sage);background:rgba(79,109,87,.13)}
+.chip.overdue{color:var(--coral);background:rgba(190,65,51,.12)}
+
+/* Legacy diamond tag kept (vet page) — reskinned to brass. */
+.tag{position:relative;display:grid;width:50px;height:50px;place-items:center;transform:rotate(45deg);border-radius:12px;background:var(--card);box-shadow:inset 0 0 0 1px var(--brass),0 3px 10px rgba(22,35,59,.12)}
+.tag>span{transform:rotate(-45deg);font-family:var(--font-display);font-weight:700}
+
+.perforation{position:relative;border-top:1px dashed var(--rule)}
+.perforation:before,.perforation:after{content:"";position:absolute;top:-7px;width:13px;height:13px;border-radius:50%;background:var(--paper);border:1px solid var(--rule)}
+.perforation:before{left:-7px}.perforation:after{right:-7px}
+.rule-input{width:100%;min-height:48px;border:0;border-bottom:1px solid var(--ink);border-radius:0;background:transparent;padding:8px 0;color:var(--ink)}
+:focus-visible{outline:2px solid var(--brass-ink);outline-offset:3px}
+@media(max-width:700px){.section{padding:72px 20px}.ledger-row{gap:10px}body{font-size:16px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}.fade{opacity:1;transform:none}}
