@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import {notFound} from 'next/navigation';
 import {headers} from 'next/headers';
 import {admin} from '@/lib/supabase';
@@ -100,7 +101,7 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
 
   const {data: pet} = await db
     .from('pets')
-    .select('id,name,species,birth_date,weight_kg,sex,neutered,microchip_number,colour_markings,user_id')
+    .select('id,name,species,birth_date,weight_kg,sex,neutered,microchip_number,colour_markings,photo_path,user_id')
     .eq('id', shareLink.pet_id)
     .single();
   if (!pet) notFound();
@@ -155,16 +156,23 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
 
   const modeLabel = scope === 'sitter' ? 'Sitter mode' : scope === 'medical' ? 'Medical record' : 'Full record';
 
+  const photoUrl = pet.photo_path ? db.storage.from('pet-photos').getPublicUrl(pet.photo_path).data.publicUrl : null;
+
   return (
     <Shell>
-      <p className="mono text-[var(--health)]">
-        {modeLabel} · read-only, shared by the owner · {shareScopeLabel[scope]}
-      </p>
+      {/* Passport masthead band — instantly says what this is to a first-time viewer. */}
+      <div className="rounded-t-xl px-5 py-3" style={{background: 'var(--ink)', color: '#EBE3D2'}}>
+        <p className="mono text-xs" style={{letterSpacing: '.2em'}}>Tailtend · Pet record</p>
+        <p className="mt-1 mono text-sm" style={{color: '#DDB870'}}>{modeLabel} · {shareScopeLabel[scope]}</p>
+      </div>
 
-      <div className="card mt-6 p-6 md:p-8">
-        <header className="flex flex-wrap items-center gap-6 border-b border-[var(--rule)] pb-6">
-          <span className="tag"><span>{pet.name[0]}</span></span>
-          <div>
+      <div className="card rounded-t-none p-6 md:p-8">
+        <header className="flex flex-wrap items-center gap-5 border-b border-[var(--rule)] pb-6">
+          <div className="passport-photo relative h-24 w-20 shrink-0">
+            {photoUrl ? <Image src={photoUrl} alt={pet.name} fill sizes="80px" className="object-cover" /> : <span className="initial text-3xl">{pet.name[0]}</span>}
+            <span className="mrz">Tailtend</span>
+          </div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-3xl">{pet.name}</h1>
             <p className="mono mt-2 text-[var(--ink-60)] capitalize">
               {pet.species}
@@ -176,6 +184,7 @@ export default async function ScopedSharePage({params}: {params: Promise<{token:
             {reveals.identity && pet.colour_markings ? <p className="mono mt-1 text-xs text-[var(--ink-60)]">{pet.colour_markings}</p> : null}
             {reveals.medicalHistory && pet.microchip_number ? <p className="mono mt-1 text-xs text-[var(--ink-60)]">Chip {pet.microchip_number}</p> : null}
           </div>
+          <span className="stamp shrink-0">Read-only</span>
         </header>
 
         {reveals.essentials && profile?.essentials_flag && (
