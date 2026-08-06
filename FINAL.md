@@ -1,5 +1,29 @@
 # Growth Layer + Care Profile — FINAL
 
+## Mobile bug fix + daily-use mechanics — this pass
+
+**Mobile ghost-text bug (fixed):** the passport redesign put the paper grain on a
+`position:fixed; z-index:99; mix-blend-mode:multiply` overlay composited over
+content, which ghosts/duplicates text on some mobile GPUs. Both grain layers now
+sit behind content (`z-index:-1/-2`) with no blend mode.
+
+**Daily-use mechanics (apply `0018_daily_use.sql` after 0016/0017):**
+- **Feeding log** — `feeding_log` table; each scheduled feeding time is a tappable
+  "Mark fed" on the Today card (reuses the treatment mark-done pattern), with a
+  unique(pet,slot,day) index as the household double-feeding guard.
+- **Daily mood prompt** — "How was [pet] today?" quick taps write `observation_log`
+  (widened tag CHECK with bright_day/quiet_day/off_day); flows to the vet views.
+- **Weekly weight nudge** on the Today card when the last weight is 7+ days old.
+- **On-time seal** — the honest "% on time" stat promoted to a third status seal.
+Verified on local Postgres (RLS, double-feed guard, mood tag) and by screenshotting
+the real dashboard at 390/1280.
+
+**Deferred (item 4):** the companion daily digest email (unlogged-feeding / weight
+nudges) — it's cron+email infrastructure that can't be verified here and risks the
+existing `due_reminder_digest`. Grooming already rides that digest (0017).
+
+---
+
 ## Live-DB fix + Phase C (daily care) — this pass
 
 **Migration order to apply against production (Supabase SQL editor):** run
