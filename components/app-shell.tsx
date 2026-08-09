@@ -95,13 +95,29 @@ return <div className={`visa${tone?` ${tone}`:''}`} style={{['--rot' as string]:
 </div>;
 }
 
+// Stamps fill a passport a page at a time rather than an endless grid — so a
+// pet with 50+ records reads as a stack of pages you leaf through, in motif.
+const STAMPS_PER_PAGE=12;
 function LifeStrip({pet,events,treatmentCount,onTimePercent}:{pet:Pet;events:LifeEvent[];treatmentCount:number;onTimePercent:number|null}){
 const daysTracked=Math.max(0,Math.round((Date.now()-new Date(pet.created_at).getTime())/86400000));
+const pageCount=Math.max(1,Math.ceil(events.length/STAMPS_PER_PAGE));
+const [page,setPage]=useState(0);
+// Reset to the first page whenever the selected pet changes.
+useEffect(()=>{setPage(0)},[pet.id]);
+const current=Math.min(page,pageCount-1);
+const shown=events.slice(current*STAMPS_PER_PAGE,current*STAMPS_PER_PAGE+STAMPS_PER_PAGE);
 return <section className="mt-10">
 <p className="rule-label">Record · {events.length} stamp{events.length===1?'':'s'}</p>
 <p className="mono mt-3 text-[var(--ink-60)]">Kept for {daysTracked} day{daysTracked===1?'':'s'} · {treatmentCount} treatment{treatmentCount===1?'':'s'}{onTimePercent!==null?` · ${onTimePercent}% on time`:''}</p>
 {events.length>0
-?<div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">{events.map(e=><VisaStamp key={e.id} event={e}/>)}</div>
+?<>
+<div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">{shown.map(e=><VisaStamp key={e.id} event={e}/>)}</div>
+{pageCount>1&&<div className="mt-5 flex items-center justify-between gap-3">
+<button type="button" className="btn ghost" onClick={()=>setPage(p=>Math.max(0,p-1))} disabled={current===0} aria-label="Previous page of stamps">← Newer</button>
+<span className="mono text-xs text-[var(--ink-60)]">Page {current+1} of {pageCount}</span>
+<button type="button" className="btn ghost" onClick={()=>setPage(p=>Math.min(pageCount-1,p+1))} disabled={current>=pageCount-1} aria-label="Next page of stamps">Older →</button>
+</div>}
+</>
 :<p className="muted mt-4 text-sm">Mark a treatment done to earn {pet.name}&apos;s first stamp.</p>}
 </section>;
 }

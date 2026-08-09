@@ -67,6 +67,42 @@ export function ShareLinkManager({pets, initialLinks, appUrl}: {pets: Pet[]; ini
     }
   }
 
+  // One-tap sitter link: sensible defaults (sitter scope, 30-day expiry) with
+  // no form to fill in, and the URL lands on the clipboard ready to paste.
+  async function quickCreate(pet: Pet) {
+    setBusy(`quick-${pet.id}`);
+    setError('');
+    try {
+      const r = await fetch(`/api/pets/${pet.id}/share-links`, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({scope: 'sitter', expiresInDays: 30}),
+      });
+      if (r.status === 402) {
+        setPaywallPet(pet);
+        return;
+      }
+      const j = await r.json();
+      if (r.ok && j.link) {
+        const link = j.link as ShareLink;
+        setLinks((v) => [link, ...v]);
+        try {
+          await navigator.clipboard.writeText(shareUrl(appUrl, link.token));
+          setCopied(link.id);
+          setTimeout(() => setCopied((c) => (c === link.id ? null : c)), 1600);
+        } catch {
+          /* clipboard blocked — the link is still visible below to copy manually */
+        }
+      } else {
+        setError(j?.error?.message || 'Could not create link — try again.');
+      }
+    } catch {
+      setError('Could not create link — check your connection and try again.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function revoke(link: ShareLink) {
     if (!confirm('Revoke this link? Anyone holding it will immediately lose access. This cannot be undone.')) return;
     setBusy(`revoke-${link.id}`);
@@ -127,7 +163,20 @@ export function ShareLinkManager({pets, initialLinks, appUrl}: {pets: Pet[]; ini
               <span className="text-xs text-black/50">{activeCount} active link{activeCount === 1 ? '' : 's'}</span>
             </div>
 
-            {/* Create a new scoped link */}
+            {/* One-tap sitter link — the common case, no form to fill in */}
+            <button
+              type="button"
+              className="btn mt-3 w-full"
+              disabled={busy === `quick-${pet.id}`}
+              onClick={() => quickCreate(pet)}
+            >
+              {busy === `quick-${pet.id}` ? 'Creating…' : `＋ Create a sitter link for ${pet.name}`}
+            </button>
+            <p className="mt-2 text-xs text-black/55">Sitter view · expires in 30 days · copied to your clipboard. Change the defaults below for anything else.</p>
+
+            {/* Detailed, scoped link — kept available but out of the way */}
+            <details className="mt-3">
+              <summary className="cursor-pointer text-sm text-clay">More options — custom scope, expiry &amp; label</summary>
             <div className="mt-3 rounded-xl border border-black/10 bg-black/[.02] p-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block text-sm">
@@ -175,6 +224,7 @@ export function ShareLinkManager({pets, initialLinks, appUrl}: {pets: Pet[]; ini
                 {busy === `create-${pet.id}` ? 'Creating…' : 'Create link'}
               </button>
             </div>
+            </details>
 
             {/* Existing links */}
             {petLinks.length > 0 && (

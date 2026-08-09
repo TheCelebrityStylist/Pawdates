@@ -136,6 +136,7 @@ export function InsuranceSection({petId, initial}: {petId: string; initial: Insu
   return (
     <div>
       {error && <p role="alert" className="mb-3 text-sm text-[#BE3D2A]">{error}</p>}
+      {policies.length === 0 && <p className="mb-3 text-sm text-black/50">No policies saved yet — add one so a claim later has the provider and policy number to hand.</p>}
       <ul className="space-y-3">
         {policies.map((p) =>
           editId === p.id ? (
