@@ -106,6 +106,23 @@ return <section className="mt-10">
 </section>;
 }
 
+type PetStatus={label:string;tone:'valid'|'soon'|'overdue'|'none';detail:string;percent:number;attention:boolean};
+// At-a-glance status for every pet, so a multi-pet household sees what needs
+// attention without switching between pets one at a time.
+function AllPetsOverview({pets,selectedId,onSelect,statuses}:{pets:Pet[];selectedId:string;onSelect:(id:string)=>void;statuses:Record<string,PetStatus>}){
+const needs=pets.filter(p=>statuses[p.id]?.attention).length;
+return <section className="mt-6">
+<p className="rule-label">All pets · {pets.length}{needs>0?` · ${needs} need${needs===1?'s':''} attention`:' · all on track'}</p>
+<div className="mt-3 space-y-2">{pets.map(p=>{const s=statuses[p.id];const sel=p.id===selectedId;return (
+<button type="button" key={p.id} onClick={()=>onSelect(p.id)} aria-pressed={sel} className={`card flex w-full items-center gap-4 p-3 text-left transition ${sel?'ring-2 ring-[var(--brass)]':''}`}>
+<span className="passport-photo relative h-12 w-11 shrink-0">{p.photoUrl?<Image src={p.photoUrl} alt="" fill sizes="44px" className="object-cover"/>:<span className="initial text-lg">{p.name[0]}</span>}</span>
+<span className="min-w-0 flex-1"><b className="block truncate">{p.name}</b><span className="mono block truncate text-xs text-[var(--ink-60)]">{s?.detail}</span></span>
+<span className={`chip shrink-0 ${s?.tone==='overdue'?'overdue':s?.tone==='valid'?'health':''}`}>{s?.label}</span>
+<span className="mono w-10 shrink-0 text-right text-xs text-[var(--ink-60)]">{s?.percent}%</span>
+</button>)})}</div>
+</section>;
+}
+
 export function AppShell({email,pets,treatments,profiles,premium,lifeEventsByPet,latestWeightByPet,latestVisitByPet,treatmentCountByPet,onTimeByPet,feedingByPet={},observedTodayByPet={},initialNotice=''}:{
 email:string;
 pets:Pet[];
@@ -134,6 +151,17 @@ const [busyFeed,setBusyFeed]=useState<string|null>(null);
 const pet=pets.find(p=>p.id===selectedId)||pets[0];
 const petTreatments=useMemo(()=>allTreatments.filter(t=>t.pet_id===pet?.id),[allTreatments,pet?.id]);
 const profile=profiles.find(p=>p.pet_id===pet?.id)||null;
+const statuses=useMemo(()=>Object.fromEntries(pets.map(p=>{
+const pts=allTreatments.filter(t=>t.pet_id===p.id);
+const st=protectionStatus(pts);
+const prof=profiles.find(x=>x.pet_id===p.id)||null;
+const {percent}=completeness({pet:{photo_path:p.photo_path,birth_date:p.birth_date,weight_kg:p.weight_kg},hasWeightLog:!!latestWeightByPet[p.id],hasTreatment:(treatmentCountByPet[p.id]||0)>0||pts.length>0,profile:prof,lastVetVisit:latestVisitByPet[p.id]||null});
+const s:PetStatus=st.status==='overdue'?{label:'OVERDUE',tone:'overdue',detail:`${st.treatmentName} · ${st.days}d overdue`,percent,attention:true}
+:st.status==='soon'?{label:'DUE SOON',tone:'soon',detail:`${st.treatmentName} · due ${st.dateLabel}`,percent,attention:true}
+:st.status==='ok'?{label:'VALID',tone:'valid',detail:`Protected until ${st.dateLabel}`,percent,attention:false}
+:{label:'NO CARE',tone:'none',detail:'Add a treatment to start',percent,attention:true};
+return [p.id,s];
+})) as Record<string,PetStatus>,[pets,allTreatments,profiles,latestWeightByPet,treatmentCountByPet,latestVisitByPet]);
 
 async function done(t:TreatmentLite){
 setStamped(t.id);
@@ -201,7 +229,7 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 <header className="flex items-center justify-between border-b border-[var(--rule)] pb-5"><Logo/><a href="/app/settings" className="mono" title={email}>Settings</a></header>
 {notice&&<p role="status" className="mt-5 border-l-2 border-[var(--health)] bg-[var(--card)] p-3 text-sm">{notice}</p>}
 
-{pets.length>1&&<div className="mt-6 flex gap-3">{pets.map(p=><button type="button" key={p.id} onClick={()=>setSelectedId(p.id)} className={`relative h-10 w-10 overflow-hidden rounded-full border ${p.id===pet.id?'border-[var(--health)]':'border-[var(--rule)]'}`}>{p.photoUrl?<Image src={p.photoUrl} alt="" fill sizes="40px" className="object-cover"/>:<span className="grid h-full w-full place-items-center text-sm font-semibold">{p.name[0]}</span>}</button>)}</div>}
+{pets.length>1&&<AllPetsOverview pets={pets} selectedId={pet.id} onSelect={setSelectedId} statuses={statuses}/>}
 
 <p className="mono mt-6 text-[var(--ink-40)]">Pet record · No. {pet.id.slice(0,8).toUpperCase()}</p>
 <section className="mt-3 flex items-start gap-5">

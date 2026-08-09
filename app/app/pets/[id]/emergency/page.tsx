@@ -1,6 +1,7 @@
 import {notFound, redirect} from 'next/navigation';
 import {sessionProfile} from '@/lib/access';
-import {emergencyHasContent, type EmergencyInfo} from '@/lib/life-admin';
+import {emergencyHasContent, providerTypeLabel, type EmergencyInfo, type InsurancePolicy, type Provider} from '@/lib/life-admin';
+import {nutritionHasContent, type NutritionPlan} from '@/lib/daily-care';
 import type {HouseAccess, HouseLogistics, Medical} from '@/lib/care-profile';
 import {PrintButton} from '@/components/print-button';
 
@@ -46,6 +47,16 @@ export default async function EmergencySheet({params}: {params: Promise<{id: str
     vetPhone = medical.emergencyVetPhone || houseLogistics.vetPhone || '';
   }
 
+  // Emergency-relevant newer life-admin data (resilient to unapplied migrations).
+  const [insRes, provRes, nutRes] = await Promise.all([
+    session.client.from('insurance_policies').select('id,provider,policy_number').eq('pet_id', id),
+    session.client.from('providers').select('id,type,name,phone').eq('pet_id', id).order('type'),
+    session.client.from('nutrition_plans').select('*').eq('pet_id', id).maybeSingle(),
+  ]);
+  const insurance = (insRes.error ? [] : insRes.data || []) as Pick<InsurancePolicy, 'id' | 'provider' | 'policy_number'>[];
+  const providers = (provRes.error ? [] : provRes.data || []) as Pick<Provider, 'id' | 'type' | 'name' | 'phone'>[];
+  const nutrition = (nutRes.error ? null : nutRes.data || null) as NutritionPlan | null;
+
   const age = ageLabel(pet.birth_date);
   const identity = [pet.species, age, pet.sex && pet.sex !== 'unknown' ? pet.sex : null, pet.neutered ? 'neutered' : null, pet.weight_kg ? `${pet.weight_kg} kg` : null].filter(Boolean).join(' · ');
 
@@ -80,6 +91,34 @@ export default async function EmergencySheet({params}: {params: Promise<{id: str
             <p className="text-xs uppercase tracking-wide text-black/50">Care instructions</p>
             <p className="mt-2 whitespace-pre-wrap text-black/80">{careInstructions || 'No emergency instructions recorded yet.'}</p>
           </div>
+
+          {nutritionHasContent(nutrition) && (
+            <div className="mt-4 rounded-xl border border-black/10 p-4">
+              <p className="text-xs uppercase tracking-wide text-black/50">Feeding</p>
+              <p className="mt-1 text-black/80">
+                {[nutrition!.food_brand, nutrition!.portion, nutrition!.meals_per_day ? `${nutrition!.meals_per_day}x/day` : null, (nutrition!.feeding_times || []).length ? (nutrition!.feeding_times || []).join(', ') : null].filter(Boolean).join(' · ')}
+              </p>
+              {nutrition!.dietary_restrictions && <p className="mt-1 text-sm text-black/60">Avoid: {nutrition!.dietary_restrictions}</p>}
+            </div>
+          )}
+
+          {providers.length > 0 && (
+            <div className="mt-4 rounded-xl border border-black/10 p-4">
+              <p className="text-xs uppercase tracking-wide text-black/50">Providers</p>
+              <ul className="mt-1 space-y-1">
+                {providers.map((p) => <li key={p.id} className="text-black/80">{providerTypeLabel[p.type]}: {p.name}{p.phone ? <> · <a className="text-clay" href={`tel:${p.phone}`}>{p.phone}</a></> : null}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {insurance.length > 0 && (
+            <div className="mt-4 rounded-xl border border-black/10 p-4">
+              <p className="text-xs uppercase tracking-wide text-black/50">Insurance</p>
+              <ul className="mt-1 space-y-1">
+                {insurance.map((ip) => <li key={ip.id} className="text-black/80">{ip.provider}{ip.policy_number ? ` · policy ${ip.policy_number}` : ''}</li>)}
+              </ul>
+            </div>
+          )}
 
           <p className="mt-6 text-center text-xs text-black/40">Tailtend · keep this where a carer can find it</p>
         </div>
