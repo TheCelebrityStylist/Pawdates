@@ -4,6 +4,21 @@ import {ContentDisclaimer} from './content-disclaimer';
 
 type Card = {kind: 'coaching' | 'vet_redirect'; headline: string; body: string; focus: string[]};
 
+// Free-tier locked state — sells the feature instead of showing nothing.
+export function GuidanceTeaser({petName}: {petName: string}) {
+  return (
+    <a href="/app/settings#upgrade" className="card mt-6 block border-l-2 border-[var(--brass)] p-6 transition hover:brightness-[1.02]">
+      <div className="flex items-center gap-2">
+        <span aria-hidden className="text-lg">✎</span>
+        <p className="rule-label">This week for {petName}</p>
+        <span className="chip ml-auto">Premium</span>
+      </div>
+      <h3 className="mt-3 text-2xl">See what&apos;s next for {petName}</h3>
+      <p className="muted mt-2 leading-[1.7]">A personalised weekly guidance note — routine, training and wellbeing coaching drawn from {petName}&apos;s own record and recent habits. <span className="text-[var(--brass-ink)]">Unlock with Premium →</span></p>
+    </a>
+  );
+}
+
 // The flagship personalised guidance card. Reads as a handwritten advisory note
 // in the passport system. Premium + life-stage-eligible pets only (gated by the
 // caller). A health concern in the pet's notes returns the vet-redirect variant.

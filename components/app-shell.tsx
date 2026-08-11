@@ -6,7 +6,7 @@ import {pickSuggestion} from '@/lib/suggestions';
 import {ObservationLog} from './observation-log';
 import {SeasonalAlert} from './seasonal-alert';
 import {MilestoneAdd} from './milestone-add';
-import {GuidanceCard} from './guidance-card';
+import {GuidanceCard,GuidanceTeaser} from './guidance-card';
 import type {LifeEvent} from '@/app/app/page';
 import type {Behaviour,Feeding,HouseAccess,HouseLogistics,PlayEnrichment,RoutineNotes,ToiletHygiene} from '@/lib/care-profile';
 import {dailyMoodTags,observationTagLabel} from '@/lib/care-profile';
@@ -64,14 +64,15 @@ const protection=status.status==='overdue'
   :status.status==='ok'
   ?{tone:'valid' as const,pct:100,num:'✓',cap:'VALID'}
   :null;
-return <div className="mt-6">
-<div className="flex flex-wrap items-center gap-6">
+// One dominant status (the protection SEAL). Profile completeness + on-time
+// are demoted to a quiet stat line so they don't compete for the eye.
+return <div className="mt-5 flex flex-wrap items-start gap-5">
 {protection&&<Seal tone={protection.tone} pct={protection.pct} num={protection.num} cap={protection.cap}/>}
-<Seal tone="brass" pct={percent} num={percent} cap="PROFILE"/>
-{onTimePercent!==null&&<Seal tone="valid" pct={onTimePercent} num={`${onTimePercent}%`} cap="ON TIME"/>}
-{segments.length>0&&<div className="min-w-[120px] flex-1"><p className="mono text-[var(--ink-60)]">Protection</p><div className="mt-2 flex flex-wrap gap-1.5">{segments.map(s=><span key={s.type} className={`chip${s.status==='overdue'?' overdue':s.status==='soon'?'':' health'}`}>{s.label}</span>)}</div></div>}
+<div className="min-w-[150px] flex-1 pt-1">
+{segments.length>0&&<div className="flex flex-wrap gap-1.5">{segments.map(s=><span key={s.type} className={`chip${s.status==='overdue'?' overdue':s.status==='soon'?'':' health'}`}>{s.label}</span>)}</div>}
+<p className="mono mt-2 text-xs text-[var(--ink-60)]">Profile {percent}% complete{onTimePercent!==null?` · ${onTimePercent}% on time`:''}</p>
+{missing.length>0&&<div className="mt-2"><button type="button" className="mono text-xs text-[var(--brass-ink)]" onClick={()=>setOpen(v=>!v)} aria-expanded={open}>{open?'Hide':'Complete the profile'} · {missing.length} left</button>{open&&<ul className="mt-2 space-y-1.5">{missing.map(i=><li className="muted text-sm" key={i.key}>· {i.label}</li>)}</ul>}</div>}
 </div>
-{missing.length>0&&<div className="mt-4"><button type="button" className="mono text-[var(--brass-ink)]" onClick={()=>setOpen(v=>!v)} aria-expanded={open}>{open?'Hide':'Complete the profile'} · {missing.length} left</button>{open&&<ul className="mt-3 space-y-2">{missing.map(i=><li className="muted text-sm" key={i.key}>· {i.label}</li>)}</ul>}</div>}
 </div>;
 }
 
@@ -140,7 +141,7 @@ return <section className="mt-6">
 </section>;
 }
 
-export function AppShell({email,pets,treatments,profiles,premium,lifeEventsByPet,latestWeightByPet,latestVisitByPet,treatmentCountByPet,onTimeByPet,feedingByPet={},observedTodayByPet={},puppyByPet={},guidanceByPet={},initialNotice=''}:{
+export function AppShell({email,pets,treatments,profiles,premium,lifeEventsByPet,latestWeightByPet,latestVisitByPet,treatmentCountByPet,onTimeByPet,feedingByPet={},observedTodayByPet={},puppyByPet={},initialNotice=''}:{
 email:string;
 pets:Pet[];
 treatments:{id:string;name:string;type:string;next_due:string;pet_id:string}[];
@@ -154,7 +155,6 @@ onTimeByPet:Record<string,number|null>;
 feedingByPet?:Record<string,{slots:string[];fed:Record<string,string>}>;
 observedTodayByPet?:Record<string,boolean>;
 puppyByPet?:Record<string,{enabled:boolean;band:string|null;suggested:string|null;total:number;done:number}>;
-guidanceByPet?:Record<string,{eligible:boolean}>;
 initialNotice?:string;
 }){
 const router=useRouter();
@@ -253,8 +253,10 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 
 {pets.length>1&&<AllPetsOverview pets={pets} selectedId={pet.id} onSelect={setSelectedId} statuses={statuses}/>}
 
-<p className="mono mt-6 text-[var(--ink-40)]">Pet record · No. {pet.id.slice(0,8).toUpperCase()}</p>
-<section className="mt-3 flex items-start gap-5">
+{/* ── Zone 1: the cover page — identity + the one dominant status, bounded ── */}
+<section className="card mt-6 p-6">
+<p className="mono text-[var(--ink-40)]">Pet record · No. {pet.id.slice(0,8).toUpperCase()}</p>
+<div className="mt-3 flex items-start gap-5">
 <div className="passport-photo h-28 w-24 shrink-0">
 {pet.photoUrl?<Image src={pet.photoUrl} alt="" fill sizes="96px" className="object-cover"/>:<span className="initial text-4xl">{pet.name[0]}</span>}
 <span className="mrz">Tailtend</span>
@@ -264,11 +266,11 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 <p className="mono mt-2 text-[var(--ink-60)]">{pet.species.toUpperCase()}{ageLabel(pet.birth_date)?` · ${ageLabel(pet.birth_date).toUpperCase()}`:''}{pet.weight_kg?` · ${pet.weight_kg} KG`:''}</p>
 {isBirthdayToday(pet.birth_date)&&<p className="mono mt-1" style={{color:'var(--brass-ink)'}}>★ {pet.name} is {ageLabel(pet.birth_date).split(' ')[0]} today.</p>}
 </div>
-</section>
-
+</div>
+<div className="mt-5 border-t border-[var(--rule)] pt-4"><StatusHeadline petName={pet.name} treatments={petTreatments}/>
+<StatusMarks treatments={petTreatments} percent={percent} items={items} onTimePercent={onTimeByPet[pet.id]??null}/></div>
 <SeasonalAlert petName={pet.name} species={pet.species} careProfile={profile}/>
-<StatusHeadline petName={pet.name} treatments={petTreatments}/>
-<StatusMarks treatments={petTreatments} percent={percent} items={items} onTimePercent={onTimeByPet[pet.id]??null}/>
+</section>
 
 <div className="card mt-8 p-6"><h2 className="rule-label">Today</h2>
 {isNewRecord?<div className="mt-4">
@@ -301,7 +303,7 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 </>}
 </div>
 
-{premium&&guidanceByPet[pet.id]?.eligible&&<GuidanceCard petId={pet.id} petName={pet.name}/>}
+{premium?<GuidanceCard petId={pet.id} petName={pet.name}/>:<GuidanceTeaser petName={pet.name}/>}
 
 {(()=>{const puppy=puppyByPet[pet.id];if(!puppy||(!puppy.enabled&&!puppy.suggested))return null;
 return puppy.enabled
@@ -315,11 +317,22 @@ return puppy.enabled
 <span className="mono shrink-0 text-[var(--brass-ink)]">Set up →</span></a>;
 })()}
 
+{/* ── page break: today's page ↕ the archive ── */}
+<div className="perforation mt-12"/>
+
+{/* ── Zone 3: the archive — the passport's stamped pages. Stamps are the one
+     dominant element here; milestones + daily notes tuck behind a "more". ── */}
+<section className="mt-8">
 <LifeStrip pet={pet} events={lifeEventsByPet[pet.id]||[]} treatmentCount={treatmentCountByPet[pet.id]||0} onTimePercent={onTimeByPet[pet.id]??null}/>
-<MilestoneAdd petId={pet.id} onAdded={()=>router.refresh()}/>
+<details className="mt-6">
+<summary className="mono cursor-pointer text-[var(--brass-ink)]">Milestones &amp; daily notes</summary>
+<div className="mt-4"><MilestoneAdd petId={pet.id} onAdded={()=>router.refresh()}/><ObservationLog petId={pet.id}/></div>
+</details>
+</section>
 
-<ObservationLog petId={pet.id}/>
-
-<div className="mt-10 flex flex-wrap gap-4 border-t border-[var(--rule)] pt-6"><a href={`/app/pets/${pet.id}/edit`} className="mono text-[var(--brass-ink)]">Edit {pet.name}</a><a href={`/app/pets/${pet.id}/care-profile`} className="mono text-[var(--brass-ink)]">Care profile</a><a href={`/app/pets/${pet.id}/weight`} className="mono text-[var(--brass-ink)]">Weight trend</a><a href={`/app/pets/${pet.id}/travel-check`} className="mono text-[var(--brass-ink)]">EU travel check</a><a href="/app/settings" className="mono text-[var(--brass-ink)]">Share &amp; export</a><button type="button" className="mono text-[var(--brass-ink)]" onClick={()=>pets.length&&!premium?setPaywall('second_pet'):location.assign('/app/onboarding')}>Add a pet</button></div>
+<details className="mt-10 border-t border-[var(--rule)] pt-6">
+<summary className="mono cursor-pointer text-[var(--brass-ink)]">More actions</summary>
+<div className="mt-4 flex flex-wrap gap-4"><a href={`/app/pets/${pet.id}/edit`} className="mono text-[var(--brass-ink)]">Edit {pet.name}</a><a href={`/app/pets/${pet.id}/care-profile`} className="mono text-[var(--brass-ink)]">Care profile</a><a href={`/app/pets/${pet.id}/weight`} className="mono text-[var(--brass-ink)]">Weight trend</a><a href={`/app/pets/${pet.id}/travel-check`} className="mono text-[var(--brass-ink)]">EU travel check</a><a href="/app/settings" className="mono text-[var(--brass-ink)]">Share &amp; export</a><button type="button" className="mono text-[var(--brass-ink)]" onClick={()=>pets.length&&!premium?setPaywall('second_pet'):location.assign('/app/onboarding')}>Add a pet</button></div>
+</details>
 
 </div>{paywall&&<PaywallSheet trigger={paywall} petName={pets[1]?.name||'Luna'} onClose={()=>setPaywall(null)}/>}</main>}
