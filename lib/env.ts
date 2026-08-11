@@ -10,5 +10,6 @@ export function stripeCheckoutEnv(plan:'monthly'|'yearly'){if(plan==='monthly'){
 export const stripeWebhookEnv=()=>read('Stripe webhook',{STRIPE_SECRET_KEY:value,STRIPE_WEBHOOK_SECRET:value,RESEND_API_KEY:value.optional(),FROM_EMAIL:value.optional(),NEXT_PUBLIC_APP_URL:url});
 export const emailEnv=()=>read('Email',{RESEND_API_KEY:value,FROM_EMAIL:value,NEXT_PUBLIC_APP_URL:url});
 export const cronEnv=()=>read('Cron',{CRON_SECRET:z.string().min(32)});
+export const guidanceEnv=()=>read('AI guidance',{ANTHROPIC_API_KEY:value});
 export function serverEnv(){const email=emailEnv();const cron=cronEnv();if(!email||!cron)throw new Error('Email sending is not configured');return {...email,...cron}}
 export function envHealth(){const valid=(schema:z.ZodTypeAny,key:string)=>schema.safeParse(process.env[key]).success;return {appUrl:valid(url,'NEXT_PUBLIC_APP_URL'),supabase:valid(url,'NEXT_PUBLIC_SUPABASE_URL')&&valid(value,'NEXT_PUBLIC_SUPABASE_ANON_KEY'),supabaseServiceRole:valid(value,'SUPABASE_SERVICE_ROLE_KEY'),stripe:valid(value,'STRIPE_SECRET_KEY'),stripeWebhook:valid(value,'STRIPE_WEBHOOK_SECRET'),stripeYearly:valid(price,'STRIPE_PRICE_YEARLY'),stripeMonthly:valid(price,'STRIPE_PRICE_MONTHLY'),resend:valid(value,'RESEND_API_KEY'),fromEmail:valid(value,'FROM_EMAIL'),cron:valid(z.string().min(32),'CRON_SECRET'),indexNow:valid(value,'INDEXNOW_KEY')}}
