@@ -67,11 +67,11 @@ const protection=status.status==='overdue'
 return <div className="mt-6">
 <div className="flex flex-wrap items-center gap-6">
 {protection&&<Seal tone={protection.tone} pct={protection.pct} num={protection.num} cap={protection.cap}/>}
-<Seal tone="brass" pct={percent} num={percent} cap="RECORD"/>
+<Seal tone="brass" pct={percent} num={percent} cap="PROFILE"/>
 {onTimePercent!==null&&<Seal tone="valid" pct={onTimePercent} num={`${onTimePercent}%`} cap="ON TIME"/>}
 {segments.length>0&&<div className="min-w-[120px] flex-1"><p className="mono text-[var(--ink-60)]">Protection</p><div className="mt-2 flex flex-wrap gap-1.5">{segments.map(s=><span key={s.type} className={`chip${s.status==='overdue'?' overdue':s.status==='soon'?'':' health'}`}>{s.label}</span>)}</div></div>}
 </div>
-{missing.length>0&&<div className="mt-4"><button type="button" className="mono text-[var(--brass-ink)]" onClick={()=>setOpen(v=>!v)} aria-expanded={open}>{open?'Hide':'Complete the record'} · {missing.length} left</button>{open&&<ul className="mt-3 space-y-2">{missing.map(i=><li className="muted text-sm" key={i.key}>· {i.label}</li>)}</ul>}</div>}
+{missing.length>0&&<div className="mt-4"><button type="button" className="mono text-[var(--brass-ink)]" onClick={()=>setOpen(v=>!v)} aria-expanded={open}>{open?'Hide':'Complete the profile'} · {missing.length} left</button>{open&&<ul className="mt-3 space-y-2">{missing.map(i=><li className="muted text-sm" key={i.key}>· {i.label}</li>)}</ul>}</div>}
 </div>;
 }
 
@@ -243,6 +243,9 @@ const moodDone=!!(observedTodayByPet[pet.id]||moodLocal[pet.id]);
 const lastWeight=latestWeightByPet[pet.id]||null;
 const daysSinceWeight=lastWeight?Math.floor((Date.now()-new Date(lastWeight).getTime())/86400000):null;
 const weightNudge=daysSinceWeight===null?!!pet.birth_date:daysSinceWeight>=7; // weekly cadence
+// Brand-new record: nothing logged yet. Show one inviting "first page" instead
+// of three disconnected empty lines. (Populated records are untouched.)
+const isNewRecord=petTreatments.length===0&&!lastWeight&&(lifeEventsByPet[pet.id]||[]).length===0;
 
 return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className="mx-auto max-w-[620px]">
 <header className="flex items-center justify-between border-b border-[var(--rule)] pb-5"><Logo/><a href="/app/settings" className="mono" title={email}>Settings</a></header>
@@ -268,6 +271,15 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 <StatusMarks treatments={petTreatments} percent={percent} items={items} onTimePercent={onTimeByPet[pet.id]??null}/>
 
 <div className="card mt-8 p-6"><h2 className="rule-label">Today</h2>
+{isNewRecord?<div className="mt-4">
+<p className="mono text-[var(--brass-ink)]">New passport · first page</p>
+<p className="muted mt-1 text-sm">Three quick stamps to bring {pet.name}&apos;s record to life — each one starts a page that fills itself over time.</p>
+<ol className="mt-5 space-y-3">
+<li className="flex items-center gap-4"><span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-dashed border-[var(--rule)]" style={{fontFamily:'var(--font-display)',color:'var(--ink-60)'}}>1</span><span className="min-w-0 flex-1"><b className="block">Add {pet.name}&apos;s first treatment</b><span className="mono block text-xs text-[var(--ink-60)]">Flea, worming or a vaccine — the reminders start here</span></span><a href={`/app/pets/${pet.id}/edit`} className="btn ghost shrink-0">Add</a></li>
+<li className="flex items-center gap-4"><span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-dashed border-[var(--rule)]" style={{fontFamily:'var(--font-display)',color:'var(--ink-60)'}}>2</span><span className="min-w-0 flex-1"><b className="block">Log {pet.name}&apos;s first weight</b><span className="mono block text-xs text-[var(--ink-60)]">Starts the weight trend the vet will want</span></span><a href={`/app/pets/${pet.id}/weight`} className="btn ghost shrink-0">Weigh</a></li>
+<li className="flex items-start gap-4"><span aria-hidden className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 ${moodDone?'border-[var(--sage)] text-[var(--sage)]':'border-dashed border-[var(--rule)] text-[var(--ink-60)]'}`} style={{fontFamily:'var(--font-display)'}}>{moodDone?'✓':'3'}</span><span className="min-w-0 flex-1"><b className="block">Note how {pet.name} is today</b>{moodDone?<span className="mono block text-xs" style={{color:'var(--sage)'}}>Logged — the first of many</span>:<><div className="mt-2 flex flex-wrap gap-2">{dailyMoodTags.map(t=><button type="button" key={t} className="chip" style={{border:'1px solid var(--rule)',cursor:'pointer',padding:'6px 10px'}} onClick={()=>logMood(pet.id,t,pet.name)}>{observationTagLabel[t]}</button>)}</div><span className="mono mt-1 block text-xs text-[var(--ink-60)]">One tap — no typing</span></>}</span></li>
+</ol>
+</div>:<>
 <div className="mt-4"><TodayAction pet={pet} treatments={petTreatments} suggestion={suggestion} onDone={done} stamped={stamped}/></div>
 
 {feedInfo.slots.length>0&&<div className="mt-4 border-t border-[var(--rule)] pt-4"><p className="mono text-[var(--ink-60)]">Feeding</p>
@@ -286,6 +298,7 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 <div className="mt-3 flex flex-wrap gap-2">{dailyMoodTags.map(t=><button type="button" key={t} className="chip" style={{border:'1px solid var(--rule)',cursor:'pointer',padding:'8px 12px'}} onClick={()=>logMood(pet.id,t,pet.name)}>{observationTagLabel[t]}</button>)}</div>
 <p className="muted mt-2 text-xs">A quick daily note builds real material for the next vet visit.</p></div>
 :<p className="mono mt-4 border-t border-[var(--rule)] pt-4" style={{color:'var(--sage)'}}>✓ Logged how {pet.name} was today</p>}
+</>}
 </div>
 
 {premium&&guidanceByPet[pet.id]?.eligible&&<GuidanceCard petId={pet.id} petName={pet.name}/>}
