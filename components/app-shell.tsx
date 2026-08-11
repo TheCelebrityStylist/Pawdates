@@ -14,6 +14,17 @@ import {dailyMoodTags,observationTagLabel} from '@/lib/care-profile';
 type Pet={id:string;name:string;species:string;birth_date:string|null;weight_kg:number|null;photo_path:string|null;created_at:string;photoUrl:string|null};
 type ProfileRow={pet_id:string;essentials_flag:string|null;forbidden_foods:string[];feeding:Feeding;routine_notes:RoutineNotes;toilet_hygiene:ToiletHygiene;behaviour:Behaviour;house_logistics:HouseLogistics;house_access:HouseAccess;play_enrichment:PlayEnrichment};
 
+// Simple paw-print motif — the one illustrated touch on the warm daily view,
+// so the screen reads as "pet app" even at a glance. Archive stays illustration-free.
+function PawMark({className='',style}:{className?:string;style?:React.CSSProperties}){
+return <svg viewBox="0 0 64 64" aria-hidden className={className} style={style} fill="currentColor"><ellipse cx="32" cy="43" rx="15" ry="12"/><ellipse cx="13" cy="29" rx="6" ry="8"/><ellipse cx="25" cy="18" rx="6" ry="8.5"/><ellipse cx="39" cy="18" rx="6" ry="8.5"/><ellipse cx="51" cy="29" rx="6" ry="8"/></svg>;
+}
+// Warm, filled tints for the daily mood buttons (soft, never alarming).
+const moodTone:Record<string,{bg:string;fg:string;border:string}>={
+bright_day:{bg:'rgba(79,109,87,.14)',fg:'var(--sage)',border:'rgba(79,109,87,.4)'},
+quiet_day:{bg:'rgba(169,124,47,.14)',fg:'var(--brass-ink)',border:'rgba(169,124,47,.4)'},
+off_day:{bg:'rgba(190,65,51,.12)',fg:'var(--coral)',border:'rgba(190,65,51,.35)'},
+};
 function ageLabel(birth:string|null):string{
 if(!birth)return '';
 const now=new Date();const b=new Date(`${birth}T00:00:00`);
@@ -64,14 +75,15 @@ const protection=status.status==='overdue'
   :status.status==='ok'
   ?{tone:'valid' as const,pct:100,num:'✓',cap:'VALID'}
   :null;
-// One dominant status (the protection SEAL). Profile completeness + on-time
-// are demoted to a quiet stat line so they don't compete for the eye.
-return <div className="mt-5 flex flex-wrap items-start gap-5">
+// One dominant status (the protection SEAL — the one earned "official" mark kept
+// on the warm view). Everything else is soft, sentence-case, warm — no mono.
+return <div className="mt-5 flex flex-wrap items-center gap-5">
 {protection&&<Seal tone={protection.tone} pct={protection.pct} num={protection.num} cap={protection.cap}/>}
-<div className="min-w-[150px] flex-1 pt-1">
-{segments.length>0&&<div className="flex flex-wrap gap-1.5">{segments.map(s=><span key={s.type} className={`chip${s.status==='overdue'?' overdue':s.status==='soon'?'':' health'}`}>{s.label}</span>)}</div>}
-<p className="mono mt-2 text-xs text-[var(--ink-60)]">Profile {percent}% complete{onTimePercent!==null?` · ${onTimePercent}% on time`:''}</p>
-{missing.length>0&&<div className="mt-2"><button type="button" className="mono text-xs text-[var(--brass-ink)]" onClick={()=>setOpen(v=>!v)} aria-expanded={open}>{open?'Hide':'Complete the profile'} · {missing.length} left</button>{open&&<ul className="mt-2 space-y-1.5">{missing.map(i=><li className="muted text-sm" key={i.key}>· {i.label}</li>)}</ul>}</div>}
+<div className="min-w-[150px] flex-1">
+{segments.length>0&&<div className="flex flex-wrap gap-2">{segments.map(s=>{const tint=s.status==='overdue'?{bg:'rgba(190,65,51,.12)',fg:'var(--coral)'}:s.status==='soon'?{bg:'rgba(169,124,47,.14)',fg:'var(--brass-ink)'}:{bg:'rgba(79,109,87,.14)',fg:'var(--sage)'};return <span key={s.type} className="rounded-full px-3 py-1 text-sm capitalize" style={{background:tint.bg,color:tint.fg}}>{s.label}</span>})}</div>}
+<p className="mt-3 text-sm text-[var(--ink-60)]">Profile {percent}% complete{onTimePercent!==null?` · ${onTimePercent}% on time`:''}</p>
+{missing.length>0&&<button type="button" className="mt-1 text-sm text-[var(--brass-ink)] underline" onClick={()=>setOpen(v=>!v)} aria-expanded={open}>{open?'Hide':`Add ${missing.length} more detail${missing.length===1?'':'s'}`}</button>}
+{open&&missing.length>0&&<ul className="mt-2 space-y-1.5">{missing.map(i=><li className="muted text-sm" key={i.key}>· {i.label}</li>)}</ul>}
 </div>
 </div>;
 }
@@ -166,6 +178,9 @@ const [paywall,setPaywall]=useState<PaywallTrigger|null>(null);
 const [fedLocal,setFedLocal]=useState<Record<string,Record<string,string>>>({});
 const [moodLocal,setMoodLocal]=useState<Record<string,boolean>>({});
 const [busyFeed,setBusyFeed]=useState<string|null>(null);
+const [weightVal,setWeightVal]=useState('');
+const [weightSaved,setWeightSaved]=useState(false);
+const [busyWeight,setBusyWeight]=useState(false);
 
 const pet=pets.find(p=>p.id===selectedId)||pets[0];
 const petTreatments=useMemo(()=>allTreatments.filter(t=>t.pet_id===pet?.id),[allTreatments,pet?.id]);
@@ -204,6 +219,19 @@ setFedLocal(v=>({...v,[petId]:{...(v[petId]||{}),[slot]:json.feeding?.fed_by||'Y
 setNotice(json.alreadyFed?`${slot} was already logged as fed today.`:`Logged — ${slot} fed.`);
 }catch{setNotice('Could not save the feeding. Check your connection and try again.')}
 finally{setBusyFeed(null)}
+}
+
+async function logWeight(petId:string){
+const kg=Number(weightVal);
+if(!(kg>0)||kg>500)return;
+setBusyWeight(true);
+try{
+const r=await fetch(`/api/pets/${petId}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({logWeight:true,weightKg:kg})});
+if(!r.ok)throw new Error();
+setWeightSaved(true);setWeightVal('');
+setNotice(`Logged — ${pet?.name} weighs ${kg} kg today.`);
+}catch{setNotice('Could not save the weight just now — try again.')}
+finally{setBusyWeight(false)}
 }
 
 async function undoFed(petId:string,slot:string){
@@ -253,53 +281,60 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 
 {pets.length>1&&<AllPetsOverview pets={pets} selectedId={pet.id} onSelect={setSelectedId} statuses={statuses}/>}
 
-{/* ── Zone 1: the cover page — identity + the one dominant status, bounded ── */}
-<section className="card mt-6 p-6">
-<p className="mono text-[var(--ink-40)]">Pet record · No. {pet.id.slice(0,8).toUpperCase()}</p>
-<div className="mt-3 flex items-start gap-5">
-<div className="passport-photo h-28 w-24 shrink-0">
-{pet.photoUrl?<Image src={pet.photoUrl} alt="" fill sizes="96px" className="object-cover"/>:<span className="initial text-4xl">{pet.name[0]}</span>}
-<span className="mrz">Tailtend</span>
-</div>
-<div className="pt-1">
+{/* ── Today / home: warm, photo-led register (Record/archive keeps the passport) ── */}
+<section className="mt-6">
+<div className="flex items-center gap-5">
+{pet.photoUrl
+?<div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-[28px]" style={{boxShadow:'0 8px 26px rgba(22,35,59,.16)'}}><Image src={pet.photoUrl} alt={pet.name} fill sizes="128px" className="object-cover"/></div>
+:<a href={`/app/pets/${pet.id}/edit`} className="grid h-32 w-32 shrink-0 place-items-center rounded-[28px] border-2 border-dashed border-[var(--brass)] text-center transition hover:bg-[rgba(169,124,47,.07)]"><span className="px-2"><PawMark className="mx-auto h-8 w-8" style={{color:'var(--brass)'}}/><span className="mt-1.5 block text-xs text-[var(--brass-ink)]">Add a photo of {pet.name}</span></span></a>}
+<div className="min-w-0">
 <h1 className="text-4xl">{pet.name}</h1>
-<p className="mono mt-2 text-[var(--ink-60)]">{pet.species.toUpperCase()}{ageLabel(pet.birth_date)?` · ${ageLabel(pet.birth_date).toUpperCase()}`:''}{pet.weight_kg?` · ${pet.weight_kg} KG`:''}</p>
-{isBirthdayToday(pet.birth_date)&&<p className="mono mt-1" style={{color:'var(--brass-ink)'}}>★ {pet.name} is {ageLabel(pet.birth_date).split(' ')[0]} today.</p>}
+<p className="mt-1 text-[var(--ink-60)]"><span className="capitalize">{pet.species}</span>{ageLabel(pet.birth_date)?` · ${ageLabel(pet.birth_date)}`:''}{pet.weight_kg?` · ${pet.weight_kg} kg`:''}</p>
+{isBirthdayToday(pet.birth_date)&&<p className="mt-1 text-sm" style={{color:'var(--brass-ink)'}}>🎂 {pet.name} is {ageLabel(pet.birth_date).split(' ')[0]} today!</p>}
 </div>
 </div>
-<div className="mt-5 border-t border-[var(--rule)] pt-4"><StatusHeadline petName={pet.name} treatments={petTreatments}/>
-<StatusMarks treatments={petTreatments} percent={percent} items={items} onTimePercent={onTimeByPet[pet.id]??null}/></div>
+<div className="card mt-6 p-6">
+<StatusHeadline petName={pet.name} treatments={petTreatments}/>
+<StatusMarks treatments={petTreatments} percent={percent} items={items} onTimePercent={onTimeByPet[pet.id]??null}/>
 <SeasonalAlert petName={pet.name} species={pet.species} careProfile={profile}/>
+</div>
 </section>
 
-<div className="card mt-8 p-6"><h2 className="rule-label">Today</h2>
+<div className="card mt-8 p-6"><div className="flex items-center gap-2"><PawMark className="h-5 w-5" style={{color:'var(--brass)'}}/><h2 className="text-2xl">Today with {pet.name}</h2></div>
 {isNewRecord?<div className="mt-4">
-<p className="mono text-[var(--brass-ink)]">New passport · first page</p>
-<p className="muted mt-1 text-sm">Three quick stamps to bring {pet.name}&apos;s record to life — each one starts a page that fills itself over time.</p>
+<p className="text-[var(--brass-ink)]">Let&apos;s bring {pet.name}&apos;s page to life.</p>
+<p className="muted mt-1 text-sm">Three quick things to start — each one grows on its own from here.</p>
 <ol className="mt-5 space-y-3">
-<li className="flex items-center gap-4"><span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-dashed border-[var(--rule)]" style={{fontFamily:'var(--font-display)',color:'var(--ink-60)'}}>1</span><span className="min-w-0 flex-1"><b className="block">Add {pet.name}&apos;s first treatment</b><span className="mono block text-xs text-[var(--ink-60)]">Flea, worming or a vaccine — the reminders start here</span></span><a href={`/app/pets/${pet.id}/edit`} className="btn ghost shrink-0">Add</a></li>
-<li className="flex items-center gap-4"><span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-dashed border-[var(--rule)]" style={{fontFamily:'var(--font-display)',color:'var(--ink-60)'}}>2</span><span className="min-w-0 flex-1"><b className="block">Log {pet.name}&apos;s first weight</b><span className="mono block text-xs text-[var(--ink-60)]">Starts the weight trend the vet will want</span></span><a href={`/app/pets/${pet.id}/weight`} className="btn ghost shrink-0">Weigh</a></li>
-<li className="flex items-start gap-4"><span aria-hidden className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 ${moodDone?'border-[var(--sage)] text-[var(--sage)]':'border-dashed border-[var(--rule)] text-[var(--ink-60)]'}`} style={{fontFamily:'var(--font-display)'}}>{moodDone?'✓':'3'}</span><span className="min-w-0 flex-1"><b className="block">Note how {pet.name} is today</b>{moodDone?<span className="mono block text-xs" style={{color:'var(--sage)'}}>Logged — the first of many</span>:<><div className="mt-2 flex flex-wrap gap-2">{dailyMoodTags.map(t=><button type="button" key={t} className="chip" style={{border:'1px solid var(--rule)',cursor:'pointer',padding:'6px 10px'}} onClick={()=>logMood(pet.id,t,pet.name)}>{observationTagLabel[t]}</button>)}</div><span className="mono mt-1 block text-xs text-[var(--ink-60)]">One tap — no typing</span></>}</span></li>
+<li className="flex items-center gap-4"><span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-dashed border-[var(--rule)]" style={{fontFamily:'var(--font-display)',color:'var(--ink-60)'}}>1</span><span className="min-w-0 flex-1"><b className="block">Add {pet.name}&apos;s first treatment</b><span className="block text-xs text-[var(--ink-60)]">Flea, worming or a vaccine — reminders start here</span></span><a href={`/app/pets/${pet.id}/edit`} className="shrink-0 rounded-full px-5 py-2 text-sm font-medium text-white transition hover:brightness-110" style={{background:'var(--brass)'}}>Add</a></li>
+<li className="flex items-center gap-4"><span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-dashed border-[var(--rule)]" style={{fontFamily:'var(--font-display)',color:'var(--ink-60)'}}>2</span><span className="min-w-0 flex-1"><b className="block">Log {pet.name}&apos;s first weight</b><span className="block text-xs text-[var(--ink-60)]">Starts the weight trend the vet will want</span></span><a href={`/app/pets/${pet.id}/weight`} className="shrink-0 rounded-full px-5 py-2 text-sm font-medium text-white transition hover:brightness-110" style={{background:'var(--brass)'}}>Weigh</a></li>
+<li className="flex items-start gap-4"><span aria-hidden className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 ${moodDone?'border-[var(--sage)] text-[var(--sage)]':'border-dashed border-[var(--rule)] text-[var(--ink-60)]'}`} style={{fontFamily:'var(--font-display)'}}>{moodDone?'✓':'3'}</span><span className="min-w-0 flex-1"><b className="block">Tell us how {pet.name} is today</b>{moodDone?<span className="block text-xs" style={{color:'var(--sage)'}}>Logged — the first of many 🐾</span>:<><div className="mt-2 flex flex-wrap gap-2">{dailyMoodTags.map(t=>{const tone=moodTone[t];return <button type="button" key={t} className="rounded-full px-4 py-2 text-sm font-medium transition hover:brightness-105" style={{background:tone.bg,color:tone.fg,border:`1px solid ${tone.border}`,cursor:'pointer'}} onClick={()=>logMood(pet.id,t,pet.name)}>{observationTagLabel[t]}</button>})}</div><span className="mt-1.5 block text-xs text-[var(--ink-60)]">One tap — no typing</span></>}</span></li>
 </ol>
 </div>:<>
 <div className="mt-4"><TodayAction pet={pet} treatments={petTreatments} suggestion={suggestion} onDone={done} stamped={stamped}/></div>
 
-{feedInfo.slots.length>0&&<div className="mt-4 border-t border-[var(--rule)] pt-4"><p className="mono text-[var(--ink-60)]">Feeding</p>
-{feedInfo.slots.map(slot=>{const by=fedToday[slot];return <div key={slot} className="mt-2 flex items-center justify-between gap-3">
-<div><b>{slot}</b>{by?<p className="mono mt-1 text-[var(--ink-60)]">Fed by {by}</p>:null}</div>
+{feedInfo.slots.length>0&&<div className="mt-5 border-t border-[var(--rule)] pt-5"><p className="font-medium">Meals today</p>
+{feedInfo.slots.map(slot=>{const by=fedToday[slot];return <div key={slot} className="mt-3 flex items-center justify-between gap-3">
+<div><b>{slot}</b>{by?<p className="mt-0.5 text-sm text-[var(--ink-60)]">Fed by {by}</p>:null}</div>
 {by?<button type="button" className="stamp" title="Tap to undo" disabled={busyFeed===`${pet.id}-${slot}`} onClick={()=>undoFed(pet.id,slot)}>Fed · today</button>
-:<button type="button" className="btn ghost" disabled={busyFeed===`${pet.id}-${slot}`} onClick={()=>markFed(pet.id,slot)}>{busyFeed===`${pet.id}-${slot}`?'…':'Mark fed'}</button>}
+:<button type="button" className="rounded-full px-5 py-2 text-sm font-medium text-white transition hover:brightness-110 disabled:opacity-50" style={{background:'var(--sage)'}} disabled={busyFeed===`${pet.id}-${slot}`} onClick={()=>markFed(pet.id,slot)}>{busyFeed===`${pet.id}-${slot}`?'…':'Mark fed'}</button>}
 </div>})}</div>}
 
-{weightNudge&&<div className="mt-4 flex items-center justify-between gap-3 border-t border-[var(--rule)] pt-4">
-<div><b>Log a weight</b><p className="mono mt-1 text-[var(--ink-60)]">{daysSinceWeight===null?'None recorded yet':`Last ${daysSinceWeight} day${daysSinceWeight===1?'':'s'} ago`}</p></div>
-<a href={`/app/pets/${pet.id}/weight`} className="btn ghost">Weigh {pet.name}</a></div>}
+{weightNudge&&<div className="mt-5 border-t border-[var(--rule)] pt-5">
+<div className="flex items-baseline justify-between gap-3"><p className="font-medium">Log a weight</p><span className="text-xs text-[var(--ink-60)]">{daysSinceWeight===null?'None recorded yet':`Last ${daysSinceWeight} day${daysSinceWeight===1?'':'s'} ago`}</span></div>
+{weightSaved?<p className="mt-2 text-sm" style={{color:'var(--sage)'}}>✓ Saved — nice one.</p>
+:<div className="mt-3 flex items-center gap-2">
+<div className="flex items-center rounded-full border border-[var(--rule)] bg-[var(--paper)] px-4 py-2 transition focus-within:border-[var(--brass)]">
+<input type="number" inputMode="decimal" step="0.1" min="0" value={weightVal} onChange={e=>setWeightVal(e.target.value)} placeholder="0.0" aria-label={`${pet.name}'s weight in kilograms`} className="w-16 bg-transparent text-right outline-none"/>
+<span className="ml-2 text-sm text-[var(--ink-60)]">kg</span>
+</div>
+<button type="button" disabled={busyWeight||!(Number(weightVal)>0)} onClick={()=>logWeight(pet.id)} className="rounded-full px-5 py-2 text-sm font-medium text-white transition hover:brightness-110 disabled:opacity-40" style={{background:'var(--brass)'}}>{busyWeight?'…':'Save'}</button>
+</div>}</div>}
 
 {!moodDone
-?<div className="mt-4 border-t border-[var(--rule)] pt-4"><p className="mono text-[var(--ink-60)]">How was {pet.name} today?</p>
-<div className="mt-3 flex flex-wrap gap-2">{dailyMoodTags.map(t=><button type="button" key={t} className="chip" style={{border:'1px solid var(--rule)',cursor:'pointer',padding:'8px 12px'}} onClick={()=>logMood(pet.id,t,pet.name)}>{observationTagLabel[t]}</button>)}</div>
+?<div className="mt-5 border-t border-[var(--rule)] pt-5"><p className="font-medium">How&apos;s {pet.name} doing today?</p>
+<div className="mt-3 flex flex-wrap gap-2">{dailyMoodTags.map(t=>{const tone=moodTone[t];return <button type="button" key={t} className="rounded-full px-4 py-2 text-sm font-medium transition hover:brightness-105" style={{background:tone.bg,color:tone.fg,border:`1px solid ${tone.border}`,cursor:'pointer'}} onClick={()=>logMood(pet.id,t,pet.name)}>{observationTagLabel[t]}</button>})}</div>
 <p className="muted mt-2 text-xs">A quick daily note builds real material for the next vet visit.</p></div>
-:<p className="mono mt-4 border-t border-[var(--rule)] pt-4" style={{color:'var(--sage)'}}>✓ Logged how {pet.name} was today</p>}
+:<p className="mt-5 border-t border-[var(--rule)] pt-5" style={{color:'var(--sage)'}}>✓ Logged how {pet.name} was today</p>}
 </>}
 </div>
 
