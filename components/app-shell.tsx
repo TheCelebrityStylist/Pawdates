@@ -139,7 +139,7 @@ return <section className="mt-6">
 </section>;
 }
 
-export function AppShell({email,pets,treatments,profiles,premium,lifeEventsByPet,latestWeightByPet,latestVisitByPet,treatmentCountByPet,onTimeByPet,feedingByPet={},observedTodayByPet={},initialNotice=''}:{
+export function AppShell({email,pets,treatments,profiles,premium,lifeEventsByPet,latestWeightByPet,latestVisitByPet,treatmentCountByPet,onTimeByPet,feedingByPet={},observedTodayByPet={},puppyByPet={},initialNotice=''}:{
 email:string;
 pets:Pet[];
 treatments:{id:string;name:string;type:string;next_due:string;pet_id:string}[];
@@ -152,6 +152,7 @@ treatmentCountByPet:Record<string,number>;
 onTimeByPet:Record<string,number|null>;
 feedingByPet?:Record<string,{slots:string[];fed:Record<string,string>}>;
 observedTodayByPet?:Record<string,boolean>;
+puppyByPet?:Record<string,{enabled:boolean;band:string|null;suggested:string|null;total:number;done:number}>;
 initialNotice?:string;
 }){
 const router=useRouter();
@@ -284,6 +285,18 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 <p className="muted mt-2 text-xs">A quick daily note builds real material for the next vet visit.</p></div>
 :<p className="mono mt-4 border-t border-[var(--rule)] pt-4" style={{color:'var(--sage)'}}>✓ Logged how {pet.name} was today</p>}
 </div>
+
+{(()=>{const puppy=puppyByPet[pet.id];if(!puppy||(!puppy.enabled&&!puppy.suggested))return null;
+return puppy.enabled
+?<a href={`/app/pets/${pet.id}/puppy`} className="card mt-6 flex items-center gap-4 p-5 transition hover:brightness-[1.02]">
+<span aria-hidden className="text-3xl">🐶</span>
+<span className="min-w-0 flex-1"><b className="block">Puppy tracker</b><span className="mono block text-xs text-[var(--ink-60)]">{puppy.total>0?`${puppy.done} of ${puppy.total} of today's routine done`:'Open today’s routine'}</span></span>
+<span className="mono shrink-0 text-[var(--brass-ink)]">Open →</span></a>
+:<a href={`/app/pets/${pet.id}/puppy`} className="card mt-6 flex items-center gap-4 p-5 transition hover:brightness-[1.02]">
+<span aria-hidden className="text-3xl">🐶</span>
+<span className="min-w-0 flex-1"><b className="block">{pet.name} is still a puppy</b><span className="mono block text-xs text-[var(--ink-60)]">Start a daily routine &amp; socialization checklist</span></span>
+<span className="mono shrink-0 text-[var(--brass-ink)]">Set up →</span></a>;
+})()}
 
 <LifeStrip pet={pet} events={lifeEventsByPet[pet.id]||[]} treatmentCount={treatmentCountByPet[pet.id]||0} onTimePercent={onTimeByPet[pet.id]??null}/>
 <MilestoneAdd petId={pet.id} onAdded={()=>router.refresh()}/>

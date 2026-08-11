@@ -1,4 +1,4 @@
-import {redirect} from 'next/navigation';import {isPremium} from '@/lib/premium';import {supabase,user} from '@/lib/supabase';import type {Profile} from '@/lib/supabase';import {AppShell} from '@/components/app-shell';import {birthdayMilestones} from '@/lib/milestones';
+import {redirect} from 'next/navigation';import {isPremium} from '@/lib/premium';import {supabase,user} from '@/lib/supabase';import type {Profile} from '@/lib/supabase';import {AppShell} from '@/components/app-shell';import {birthdayMilestones} from '@/lib/milestones';import {suggestedBand} from '@/lib/puppy';
 
 export type LifeEvent={id:string;date:string;kind:'treatment'|'visit'|'weight'|'checkoff'|'milestone';label:string;detail:string;wasOverdue:boolean|null;photoUrl?:string|null};
 
@@ -36,6 +36,17 @@ const obsRows=(obsR.error?[]:obsR.data||[]) as {pet_id:string;created_at:string}
 const feedingByPet=Object.fromEntries((pets||[]).map(p=>{const times=(nutritionRows.find(n=>n.pet_id===p.id)?.feeding_times)||[];const fed=Object.fromEntries(feedRows.filter(f=>f.pet_id===p.id).map(f=>[f.meal_time_slot,f.fed_by]));return [p.id,{slots:[...times].sort(),fed}]}));
 const observedTodayByPet=Object.fromEntries((pets||[]).map(p=>[p.id,obsRows.some(o=>o.pet_id===p.id)]));
 
+// Puppy-stage status per pet (migration 0020 may be unapplied → fall back).
+const [pmR,priR,prlR]=petIds.length?await Promise.all([
+s.from('puppy_mode').select('pet_id,enabled,band').in('pet_id',petIds),
+s.from('puppy_routine_items').select('pet_id').eq('active',true).in('pet_id',petIds),
+s.from('puppy_routine_log').select('pet_id,item_id').in('pet_id',petIds).eq('done_for_date',today)
+]):[{data:[],error:null},{data:[],error:null},{data:[],error:null}];
+const pmRows=(pmR.error?[]:pmR.data||[]) as {pet_id:string;enabled:boolean;band:string}[];
+const priRows=(priR.error?[]:priR.data||[]) as {pet_id:string}[];
+const prlRows=(prlR.error?[]:prlR.data||[]) as {pet_id:string;item_id:string}[];
+const puppyByPet=Object.fromEntries((pets||[]).map(p=>{const m=pmRows.find(x=>x.pet_id===p.id);const total=priRows.filter(x=>x.pet_id===p.id).length;const done=prlRows.filter(x=>x.pet_id===p.id).length;const suggested=suggestedBand(p.birth_date);return [p.id,{enabled:!!m?.enabled,band:m?.band||null,suggested,total,done}]}));
+
 const photoUrls=Object.fromEntries((pets||[]).filter(p=>p.photo_path).map(p=>[p.id,s.storage.from('pet-photos').getPublicUrl(p.photo_path!).data.publicUrl]));
 
 const lifeEventsByPet:Record<string,LifeEvent[]>={};
@@ -68,5 +79,6 @@ treatmentCountByPet={treatmentCountByPet}
 onTimeByPet={onTimeByPet}
 feedingByPet={feedingByPet}
 observedTodayByPet={observedTodayByPet}
+puppyByPet={puppyByPet}
 initialNotice={query.upgraded==='1'?'Thank you — Premium is active. Every treatment record is unlocked.':query.onboarded?`${query.onboarded}'s record is running. Next up is already on the calendar.`:''}
 />}
