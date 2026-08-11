@@ -79,6 +79,7 @@ export function GroomingSection({petId, initial}: {petId: string; initial: Groom
   return (
     <div>
       {error && <p role="alert" className="mb-3 text-sm text-[#BE3D2A]">{error}</p>}
+      {tasks.length === 0 && <p className="mb-3 text-sm text-black/50">No grooming tasks yet — add nail trims, baths or coat care and Tailtend will track when each is next due.</p>}
       <ul className="space-y-3">
         {tasks.map((g) =>
           editId === g.id ? (

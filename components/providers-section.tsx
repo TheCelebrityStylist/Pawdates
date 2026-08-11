@@ -85,6 +85,7 @@ export function ProvidersSection({petId, initial}: {petId: string; initial: Prov
   return (
     <div>
       {error && <p role="alert" className="mb-3 text-sm text-[#BE3D2A]">{error}</p>}
+      {providers.length === 0 && <p className="mb-3 text-sm text-black/50">No providers saved yet — add your vet, groomer or walker so their number is one tap away.</p>}
       <ul className="space-y-3">
         {providers.map((p) =>
           editId === p.id ? (

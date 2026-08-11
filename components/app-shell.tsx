@@ -6,6 +6,7 @@ import {pickSuggestion} from '@/lib/suggestions';
 import {ObservationLog} from './observation-log';
 import {SeasonalAlert} from './seasonal-alert';
 import {MilestoneAdd} from './milestone-add';
+import {GuidanceCard} from './guidance-card';
 import type {LifeEvent} from '@/app/app/page';
 import type {Behaviour,Feeding,HouseAccess,HouseLogistics,PlayEnrichment,RoutineNotes,ToiletHygiene} from '@/lib/care-profile';
 import {dailyMoodTags,observationTagLabel} from '@/lib/care-profile';
@@ -66,11 +67,11 @@ const protection=status.status==='overdue'
 return <div className="mt-6">
 <div className="flex flex-wrap items-center gap-6">
 {protection&&<Seal tone={protection.tone} pct={protection.pct} num={protection.num} cap={protection.cap}/>}
-<Seal tone="brass" pct={percent} num={percent} cap="RECORD"/>
+<Seal tone="brass" pct={percent} num={percent} cap="PROFILE"/>
 {onTimePercent!==null&&<Seal tone="valid" pct={onTimePercent} num={`${onTimePercent}%`} cap="ON TIME"/>}
 {segments.length>0&&<div className="min-w-[120px] flex-1"><p className="mono text-[var(--ink-60)]">Protection</p><div className="mt-2 flex flex-wrap gap-1.5">{segments.map(s=><span key={s.type} className={`chip${s.status==='overdue'?' overdue':s.status==='soon'?'':' health'}`}>{s.label}</span>)}</div></div>}
 </div>
-{missing.length>0&&<div className="mt-4"><button type="button" className="mono text-[var(--brass-ink)]" onClick={()=>setOpen(v=>!v)} aria-expanded={open}>{open?'Hide':'Complete the record'} · {missing.length} left</button>{open&&<ul className="mt-3 space-y-2">{missing.map(i=><li className="muted text-sm" key={i.key}>· {i.label}</li>)}</ul>}</div>}
+{missing.length>0&&<div className="mt-4"><button type="button" className="mono text-[var(--brass-ink)]" onClick={()=>setOpen(v=>!v)} aria-expanded={open}>{open?'Hide':'Complete the profile'} · {missing.length} left</button>{open&&<ul className="mt-3 space-y-2">{missing.map(i=><li className="muted text-sm" key={i.key}>· {i.label}</li>)}</ul>}</div>}
 </div>;
 }
 
@@ -95,18 +96,51 @@ return <div className={`visa${tone?` ${tone}`:''}`} style={{['--rot' as string]:
 </div>;
 }
 
+// Stamps fill a passport a page at a time rather than an endless grid — so a
+// pet with 50+ records reads as a stack of pages you leaf through, in motif.
+const STAMPS_PER_PAGE=12;
 function LifeStrip({pet,events,treatmentCount,onTimePercent}:{pet:Pet;events:LifeEvent[];treatmentCount:number;onTimePercent:number|null}){
 const daysTracked=Math.max(0,Math.round((Date.now()-new Date(pet.created_at).getTime())/86400000));
+const pageCount=Math.max(1,Math.ceil(events.length/STAMPS_PER_PAGE));
+const [page,setPage]=useState(0);
+// Reset to the first page whenever the selected pet changes.
+useEffect(()=>{setPage(0)},[pet.id]);
+const current=Math.min(page,pageCount-1);
+const shown=events.slice(current*STAMPS_PER_PAGE,current*STAMPS_PER_PAGE+STAMPS_PER_PAGE);
 return <section className="mt-10">
 <p className="rule-label">Record · {events.length} stamp{events.length===1?'':'s'}</p>
 <p className="mono mt-3 text-[var(--ink-60)]">Kept for {daysTracked} day{daysTracked===1?'':'s'} · {treatmentCount} treatment{treatmentCount===1?'':'s'}{onTimePercent!==null?` · ${onTimePercent}% on time`:''}</p>
 {events.length>0
-?<div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">{events.map(e=><VisaStamp key={e.id} event={e}/>)}</div>
+?<>
+<div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">{shown.map(e=><VisaStamp key={e.id} event={e}/>)}</div>
+{pageCount>1&&<div className="mt-5 flex items-center justify-between gap-3">
+<button type="button" className="btn ghost" onClick={()=>setPage(p=>Math.max(0,p-1))} disabled={current===0} aria-label="Previous page of stamps">← Newer</button>
+<span className="mono text-xs text-[var(--ink-60)]">Page {current+1} of {pageCount}</span>
+<button type="button" className="btn ghost" onClick={()=>setPage(p=>Math.min(pageCount-1,p+1))} disabled={current>=pageCount-1} aria-label="Next page of stamps">Older →</button>
+</div>}
+</>
 :<p className="muted mt-4 text-sm">Mark a treatment done to earn {pet.name}&apos;s first stamp.</p>}
 </section>;
 }
 
-export function AppShell({email,pets,treatments,profiles,premium,lifeEventsByPet,latestWeightByPet,latestVisitByPet,treatmentCountByPet,onTimeByPet,feedingByPet={},observedTodayByPet={},initialNotice=''}:{
+type PetStatus={label:string;tone:'valid'|'soon'|'overdue'|'none';detail:string;percent:number;attention:boolean};
+// At-a-glance status for every pet, so a multi-pet household sees what needs
+// attention without switching between pets one at a time.
+function AllPetsOverview({pets,selectedId,onSelect,statuses}:{pets:Pet[];selectedId:string;onSelect:(id:string)=>void;statuses:Record<string,PetStatus>}){
+const needs=pets.filter(p=>statuses[p.id]?.attention).length;
+return <section className="mt-6">
+<p className="rule-label">All pets · {pets.length}{needs>0?` · ${needs} need${needs===1?'s':''} attention`:' · all on track'}</p>
+<div className="mt-3 space-y-2">{pets.map(p=>{const s=statuses[p.id];const sel=p.id===selectedId;return (
+<button type="button" key={p.id} onClick={()=>onSelect(p.id)} aria-pressed={sel} className={`card flex w-full items-center gap-4 p-3 text-left transition ${sel?'ring-2 ring-[var(--brass)]':''}`}>
+<span className="passport-photo relative h-12 w-11 shrink-0">{p.photoUrl?<Image src={p.photoUrl} alt="" fill sizes="44px" className="object-cover"/>:<span className="initial text-lg">{p.name[0]}</span>}</span>
+<span className="min-w-0 flex-1"><b className="block truncate">{p.name}</b><span className="mono block truncate text-xs text-[var(--ink-60)]">{s?.detail}</span></span>
+<span className={`chip shrink-0 ${s?.tone==='overdue'?'overdue':s?.tone==='valid'?'health':''}`}>{s?.label}</span>
+<span className="mono w-10 shrink-0 text-right text-xs text-[var(--ink-60)]">{s?.percent}%</span>
+</button>)})}</div>
+</section>;
+}
+
+export function AppShell({email,pets,treatments,profiles,premium,lifeEventsByPet,latestWeightByPet,latestVisitByPet,treatmentCountByPet,onTimeByPet,feedingByPet={},observedTodayByPet={},puppyByPet={},guidanceByPet={},initialNotice=''}:{
 email:string;
 pets:Pet[];
 treatments:{id:string;name:string;type:string;next_due:string;pet_id:string}[];
@@ -119,6 +153,8 @@ treatmentCountByPet:Record<string,number>;
 onTimeByPet:Record<string,number|null>;
 feedingByPet?:Record<string,{slots:string[];fed:Record<string,string>}>;
 observedTodayByPet?:Record<string,boolean>;
+puppyByPet?:Record<string,{enabled:boolean;band:string|null;suggested:string|null;total:number;done:number}>;
+guidanceByPet?:Record<string,{eligible:boolean}>;
 initialNotice?:string;
 }){
 const router=useRouter();
@@ -134,6 +170,17 @@ const [busyFeed,setBusyFeed]=useState<string|null>(null);
 const pet=pets.find(p=>p.id===selectedId)||pets[0];
 const petTreatments=useMemo(()=>allTreatments.filter(t=>t.pet_id===pet?.id),[allTreatments,pet?.id]);
 const profile=profiles.find(p=>p.pet_id===pet?.id)||null;
+const statuses=useMemo(()=>Object.fromEntries(pets.map(p=>{
+const pts=allTreatments.filter(t=>t.pet_id===p.id);
+const st=protectionStatus(pts);
+const prof=profiles.find(x=>x.pet_id===p.id)||null;
+const {percent}=completeness({pet:{photo_path:p.photo_path,birth_date:p.birth_date,weight_kg:p.weight_kg},hasWeightLog:!!latestWeightByPet[p.id],hasTreatment:(treatmentCountByPet[p.id]||0)>0||pts.length>0,profile:prof,lastVetVisit:latestVisitByPet[p.id]||null});
+const s:PetStatus=st.status==='overdue'?{label:'OVERDUE',tone:'overdue',detail:`${st.treatmentName} · ${st.days}d overdue`,percent,attention:true}
+:st.status==='soon'?{label:'DUE SOON',tone:'soon',detail:`${st.treatmentName} · due ${st.dateLabel}`,percent,attention:true}
+:st.status==='ok'?{label:'VALID',tone:'valid',detail:`Protected until ${st.dateLabel}`,percent,attention:false}
+:{label:'NO CARE',tone:'none',detail:'Add a treatment to start',percent,attention:true};
+return [p.id,s];
+})) as Record<string,PetStatus>,[pets,allTreatments,profiles,latestWeightByPet,treatmentCountByPet,latestVisitByPet]);
 
 async function done(t:TreatmentLite){
 setStamped(t.id);
@@ -196,12 +243,15 @@ const moodDone=!!(observedTodayByPet[pet.id]||moodLocal[pet.id]);
 const lastWeight=latestWeightByPet[pet.id]||null;
 const daysSinceWeight=lastWeight?Math.floor((Date.now()-new Date(lastWeight).getTime())/86400000):null;
 const weightNudge=daysSinceWeight===null?!!pet.birth_date:daysSinceWeight>=7; // weekly cadence
+// Brand-new record: nothing logged yet. Show one inviting "first page" instead
+// of three disconnected empty lines. (Populated records are untouched.)
+const isNewRecord=petTreatments.length===0&&!lastWeight&&(lifeEventsByPet[pet.id]||[]).length===0;
 
 return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className="mx-auto max-w-[620px]">
 <header className="flex items-center justify-between border-b border-[var(--rule)] pb-5"><Logo/><a href="/app/settings" className="mono" title={email}>Settings</a></header>
 {notice&&<p role="status" className="mt-5 border-l-2 border-[var(--health)] bg-[var(--card)] p-3 text-sm">{notice}</p>}
 
-{pets.length>1&&<div className="mt-6 flex gap-3">{pets.map(p=><button type="button" key={p.id} onClick={()=>setSelectedId(p.id)} className={`relative h-10 w-10 overflow-hidden rounded-full border ${p.id===pet.id?'border-[var(--health)]':'border-[var(--rule)]'}`}>{p.photoUrl?<Image src={p.photoUrl} alt="" fill sizes="40px" className="object-cover"/>:<span className="grid h-full w-full place-items-center text-sm font-semibold">{p.name[0]}</span>}</button>)}</div>}
+{pets.length>1&&<AllPetsOverview pets={pets} selectedId={pet.id} onSelect={setSelectedId} statuses={statuses}/>}
 
 <p className="mono mt-6 text-[var(--ink-40)]">Pet record · No. {pet.id.slice(0,8).toUpperCase()}</p>
 <section className="mt-3 flex items-start gap-5">
@@ -221,6 +271,15 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 <StatusMarks treatments={petTreatments} percent={percent} items={items} onTimePercent={onTimeByPet[pet.id]??null}/>
 
 <div className="card mt-8 p-6"><h2 className="rule-label">Today</h2>
+{isNewRecord?<div className="mt-4">
+<p className="mono text-[var(--brass-ink)]">New passport · first page</p>
+<p className="muted mt-1 text-sm">Three quick stamps to bring {pet.name}&apos;s record to life — each one starts a page that fills itself over time.</p>
+<ol className="mt-5 space-y-3">
+<li className="flex items-center gap-4"><span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-dashed border-[var(--rule)]" style={{fontFamily:'var(--font-display)',color:'var(--ink-60)'}}>1</span><span className="min-w-0 flex-1"><b className="block">Add {pet.name}&apos;s first treatment</b><span className="mono block text-xs text-[var(--ink-60)]">Flea, worming or a vaccine — the reminders start here</span></span><a href={`/app/pets/${pet.id}/edit`} className="btn ghost shrink-0">Add</a></li>
+<li className="flex items-center gap-4"><span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-dashed border-[var(--rule)]" style={{fontFamily:'var(--font-display)',color:'var(--ink-60)'}}>2</span><span className="min-w-0 flex-1"><b className="block">Log {pet.name}&apos;s first weight</b><span className="mono block text-xs text-[var(--ink-60)]">Starts the weight trend the vet will want</span></span><a href={`/app/pets/${pet.id}/weight`} className="btn ghost shrink-0">Weigh</a></li>
+<li className="flex items-start gap-4"><span aria-hidden className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 ${moodDone?'border-[var(--sage)] text-[var(--sage)]':'border-dashed border-[var(--rule)] text-[var(--ink-60)]'}`} style={{fontFamily:'var(--font-display)'}}>{moodDone?'✓':'3'}</span><span className="min-w-0 flex-1"><b className="block">Note how {pet.name} is today</b>{moodDone?<span className="mono block text-xs" style={{color:'var(--sage)'}}>Logged — the first of many</span>:<><div className="mt-2 flex flex-wrap gap-2">{dailyMoodTags.map(t=><button type="button" key={t} className="chip" style={{border:'1px solid var(--rule)',cursor:'pointer',padding:'6px 10px'}} onClick={()=>logMood(pet.id,t,pet.name)}>{observationTagLabel[t]}</button>)}</div><span className="mono mt-1 block text-xs text-[var(--ink-60)]">One tap — no typing</span></>}</span></li>
+</ol>
+</div>:<>
 <div className="mt-4"><TodayAction pet={pet} treatments={petTreatments} suggestion={suggestion} onDone={done} stamped={stamped}/></div>
 
 {feedInfo.slots.length>0&&<div className="mt-4 border-t border-[var(--rule)] pt-4"><p className="mono text-[var(--ink-60)]">Feeding</p>
@@ -239,7 +298,22 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 <div className="mt-3 flex flex-wrap gap-2">{dailyMoodTags.map(t=><button type="button" key={t} className="chip" style={{border:'1px solid var(--rule)',cursor:'pointer',padding:'8px 12px'}} onClick={()=>logMood(pet.id,t,pet.name)}>{observationTagLabel[t]}</button>)}</div>
 <p className="muted mt-2 text-xs">A quick daily note builds real material for the next vet visit.</p></div>
 :<p className="mono mt-4 border-t border-[var(--rule)] pt-4" style={{color:'var(--sage)'}}>✓ Logged how {pet.name} was today</p>}
+</>}
 </div>
+
+{premium&&guidanceByPet[pet.id]?.eligible&&<GuidanceCard petId={pet.id} petName={pet.name}/>}
+
+{(()=>{const puppy=puppyByPet[pet.id];if(!puppy||(!puppy.enabled&&!puppy.suggested))return null;
+return puppy.enabled
+?<a href={`/app/pets/${pet.id}/puppy`} className="card mt-6 flex items-center gap-4 p-5 transition hover:brightness-[1.02]">
+<span aria-hidden className="text-3xl">🐶</span>
+<span className="min-w-0 flex-1"><b className="block">Puppy tracker</b><span className="mono block text-xs text-[var(--ink-60)]">{puppy.total>0?`${puppy.done} of ${puppy.total} of today's routine done`:'Open today’s routine'}</span></span>
+<span className="mono shrink-0 text-[var(--brass-ink)]">Open →</span></a>
+:<a href={`/app/pets/${pet.id}/puppy`} className="card mt-6 flex items-center gap-4 p-5 transition hover:brightness-[1.02]">
+<span aria-hidden className="text-3xl">🐶</span>
+<span className="min-w-0 flex-1"><b className="block">{pet.name} is still growing up</b><span className="mono block text-xs text-[var(--ink-60)]">Start a daily routine &amp; socialization checklist</span></span>
+<span className="mono shrink-0 text-[var(--brass-ink)]">Set up →</span></a>;
+})()}
 
 <LifeStrip pet={pet} events={lifeEventsByPet[pet.id]||[]} treatmentCount={treatmentCountByPet[pet.id]||0} onTimePercent={onTimeByPet[pet.id]??null}/>
 <MilestoneAdd petId={pet.id} onAdded={()=>router.refresh()}/>

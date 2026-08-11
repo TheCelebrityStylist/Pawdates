@@ -108,6 +108,7 @@ export function ExpensesSection({petId, initial}: {petId: string; initial: Expen
         </div>
       )}
 
+      {expenses.length === 0 && <p className="mb-3 text-sm text-black/50">No expenses logged yet — add vet bills, food or insurance and Tailtend totals them by month and category.</p>}
       <ul className="space-y-3">
         {expenses.map((e) =>
           editId === e.id ? (
