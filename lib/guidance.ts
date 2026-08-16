@@ -70,7 +70,16 @@ export type GuidanceProfile = {
 };
 
 export function buildGuidanceUserPrompt(p: GuidanceProfile): string {
+  // Branch the framing on life stage rather than gating on it: young/new pets
+  // get onboarding-style coaching; adult/senior pets get routine-consistency and
+  // wellbeing coaching from the same data — never puppy/kitten-specific content.
+  const onboarding = /young|adolescent|new/i.test(p.stage);
+  const framing = onboarding
+    ? `Framing: onboarding coaching for a young or newly-arrived pet — prioritise socialisation, gentle new experiences and habit-forming appropriate to this stage.`
+    : `Framing: routine and wellbeing coaching for an established adult pet — reinforce consistency, enrichment and healthy daily habits drawn from the record below. Do NOT use puppy/kitten-specific or socialisation-window content; this is a grown pet.`;
   const lines = [
+    framing,
+    '',
     `Pet: ${p.name}`,
     `Species: ${p.species}`,
     `Life stage: ${p.stage}${p.ageLabel ? ` (${p.ageLabel})` : ''}`,

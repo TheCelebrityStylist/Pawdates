@@ -7,5 +7,8 @@ export function SeasonalAlert({petName,species,careProfile}:{petName:string;spec
 const alerts=activeAlerts(new Date(),{petName,species,fearsTriggers:careProfile?.behaviour?.fearsTriggers,comfort:careProfile?.behaviour?.comfort});
 if(!alerts.length)return null;
 const alert=alerts[0];
-return <p className="mt-4 border-l-2 border-[var(--brass)] bg-[var(--card)] p-3 text-sm">{alert.text}</p>;
+return <div className="mt-4 flex items-start gap-3 rounded-2xl p-4" style={{background:'rgba(169,124,47,.09)'}}>
+<span aria-hidden className="text-lg leading-none">💡</span>
+<p className="text-sm leading-[1.6] text-[var(--ink)]">{alert.text}</p>
+</div>;
 }

@@ -1,4 +1,4 @@
-import {redirect} from 'next/navigation';import {isPremium} from '@/lib/premium';import {supabase,user} from '@/lib/supabase';import type {Profile} from '@/lib/supabase';import {AppShell} from '@/components/app-shell';import {birthdayMilestones} from '@/lib/milestones';import {suggestedBand} from '@/lib/puppy';import {lifeStageEligible,ageDays} from '@/lib/life-stage';
+import {redirect} from 'next/navigation';import {isPremium} from '@/lib/premium';import {supabase,user} from '@/lib/supabase';import type {Profile} from '@/lib/supabase';import {AppShell} from '@/components/app-shell';import {birthdayMilestones} from '@/lib/milestones';import {suggestedBand} from '@/lib/puppy';
 
 export type LifeEvent={id:string;date:string;kind:'treatment'|'visit'|'weight'|'checkoff'|'milestone';label:string;detail:string;wasOverdue:boolean|null;photoUrl?:string|null};
 
@@ -46,8 +46,6 @@ const pmRows=(pmR.error?[]:pmR.data||[]) as {pet_id:string;enabled:boolean;band:
 const priRows=(priR.error?[]:priR.data||[]) as {pet_id:string}[];
 const prlRows=(prlR.error?[]:prlR.data||[]) as {pet_id:string;item_id:string}[];
 const puppyByPet=Object.fromEntries((pets||[]).map(p=>{const m=pmRows.find(x=>x.pet_id===p.id);const total=priRows.filter(x=>x.pet_id===p.id).length;const done=prlRows.filter(x=>x.pet_id===p.id).length;const suggested=suggestedBand(p.birth_date);return [p.id,{enabled:!!m?.enabled,band:m?.band||null,suggested,total,done}]}));
-// Life-stage-eligible pets (any species) see the AI guidance card (Premium-gated in the card).
-const guidanceByPet=Object.fromEntries((pets||[]).map(p=>{const m=pmRows.find(x=>x.pet_id===p.id);return [p.id,{eligible:lifeStageEligible(p.species,ageDays(p.birth_date),!!m?.new_to_household)}]}));
 
 const photoUrls=Object.fromEntries((pets||[]).filter(p=>p.photo_path).map(p=>[p.id,s.storage.from('pet-photos').getPublicUrl(p.photo_path!).data.publicUrl]));
 
@@ -82,6 +80,5 @@ onTimeByPet={onTimeByPet}
 feedingByPet={feedingByPet}
 observedTodayByPet={observedTodayByPet}
 puppyByPet={puppyByPet}
-guidanceByPet={guidanceByPet}
 initialNotice={query.upgraded==='1'?'Thank you — Premium is active. Every treatment record is unlocked.':query.onboarded?`${query.onboarded}'s record is running. Next up is already on the calendar.`:''}
 />}
