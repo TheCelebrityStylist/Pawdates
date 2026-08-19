@@ -7,6 +7,7 @@ import {ObservationLog} from './observation-log';
 import {SeasonalAlert} from './seasonal-alert';
 import {MilestoneAdd} from './milestone-add';
 import {GuidanceCard,GuidanceTeaser} from './guidance-card';
+import {PawMark} from './paw-mark';
 import type {LifeEvent} from '@/app/app/page';
 import type {Behaviour,Feeding,HouseAccess,HouseLogistics,PlayEnrichment,RoutineNotes,ToiletHygiene} from '@/lib/care-profile';
 import {dailyMoodTags,observationTagLabel} from '@/lib/care-profile';
@@ -14,11 +15,6 @@ import {dailyMoodTags,observationTagLabel} from '@/lib/care-profile';
 type Pet={id:string;name:string;species:string;birth_date:string|null;weight_kg:number|null;photo_path:string|null;created_at:string;photoUrl:string|null};
 type ProfileRow={pet_id:string;essentials_flag:string|null;forbidden_foods:string[];feeding:Feeding;routine_notes:RoutineNotes;toilet_hygiene:ToiletHygiene;behaviour:Behaviour;house_logistics:HouseLogistics;house_access:HouseAccess;play_enrichment:PlayEnrichment};
 
-// Simple paw-print motif — the one illustrated touch on the warm daily view,
-// so the screen reads as "pet app" even at a glance. Archive stays illustration-free.
-function PawMark({className='',style}:{className?:string;style?:React.CSSProperties}){
-return <svg viewBox="0 0 64 64" aria-hidden className={className} style={style} fill="currentColor"><ellipse cx="32" cy="43" rx="15" ry="12"/><ellipse cx="13" cy="29" rx="6" ry="8"/><ellipse cx="25" cy="18" rx="6" ry="8.5"/><ellipse cx="39" cy="18" rx="6" ry="8.5"/><ellipse cx="51" cy="29" rx="6" ry="8"/></svg>;
-}
 // Warm, filled tints for the daily mood buttons (soft, never alarming).
 const moodTone:Record<string,{bg:string;fg:string;border:string}>={
 bright_day:{bg:'rgba(79,109,87,.14)',fg:'var(--sage)',border:'rgba(79,109,87,.4)'},
@@ -91,7 +87,7 @@ return <div className="mt-5 flex flex-wrap items-center gap-5">
 function TodayAction({pet,treatments,suggestion,onDone,stamped}:{pet:Pet;treatments:TreatmentLite[];suggestion:{text:string;href:string}|null;onDone:(t:TreatmentLite)=>void;stamped:string|null}){
 const status=protectionStatus(treatments);
 const due=treatments.find(t=>daysUntil(t.next_due)<=3);
-if(due)return <div className="ledger-row relative"><div><b>{due.name}</b><p className="mono mt-1 text-[var(--ink-60)]">{status.status==='overdue'?`Overdue by ${status.days} day${status.days===1?'':'s'}`:`Due ${status.dateLabel}`}</p></div>{stamped===due.id?<span className="stamp hit">Done · today</span>:<button onClick={()=>onDone(due)} className="btn ghost">Mark as done</button>}</div>;
+if(due)return <div className="ledger-row relative"><div><b>{due.name}</b><p className="mono mt-1 text-[var(--ink-60)]">{status.status==='overdue'?`Overdue by ${status.days} day${status.days===1?'':'s'}`:`Due ${status.dateLabel}`}</p></div>{stamped===due.id?<span className={`stamp hit${status.status==='overdue'?' overdue':''}`}>Done · today</span>:<button onClick={()=>onDone(due)} className="btn ghost">Mark as done</button>}</div>;
 if(suggestion)return <a href={suggestion.href} className="ledger-row block"><span className="muted">{suggestion.text}</span></a>;
 return <p className="muted mt-2">{pet.name}&apos;s record is fully up to date.</p>;
 }
@@ -132,7 +128,7 @@ return <section className="mt-10">
 <button type="button" className="btn ghost" onClick={()=>setPage(p=>Math.min(pageCount-1,p+1))} disabled={current>=pageCount-1} aria-label="Next page of stamps">Older →</button>
 </div>}
 </>
-:<p className="muted mt-4 text-sm">Mark a treatment done to earn {pet.name}&apos;s first stamp.</p>}
+:<p className="muted mt-4 flex items-center gap-2 text-sm"><PawMark eyes className="h-4 w-4 shrink-0" style={{color:'var(--brass)'}}/>Mark a treatment done to earn {pet.name}&apos;s first stamp.</p>}
 </section>;
 }
 
@@ -153,7 +149,55 @@ return <section className="mt-6">
 </section>;
 }
 
-export function AppShell({email,pets,treatments,profiles,premium,lifeEventsByPet,latestWeightByPet,latestVisitByPet,treatmentCountByPet,onTimeByPet,feedingByPet={},observedTodayByPet={},puppyByPet={},initialNotice=''}:{
+// ── Engagement: streak line, milestone banner, weekly recap ──────────────────
+// Text uses --brass-ink (the AA-verified brass text token, 4.97:1 on paper);
+// raw --brass is decorative-only per the design system, so it is used only for
+// non-text glyphs. See report note on §1.2 vs §1.4.
+const STREAK_MILESTONES=[3,7,14,30,60,100];
+function streakMilestoneCopy(n:number,petName:string):string|null{
+if(n===3||n===7||n===14)return `${n} days with ${petName} — nice and steady.`;
+if(n===30||n===60||n===100)return `${n} days. That's real consistency.`;
+return null;
+}
+
+// Silent by design: renders only when streak≥1; a break/reset renders nothing.
+function StreakLine({streak}:{streak:number}){
+if(streak<1)return null;
+return <p className="mt-1.5 flex items-center gap-1.5 text-sm" style={{color:'var(--brass-ink)'}} aria-label={`${streak} day streak`}>
+<span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full" style={{background:'var(--brass)'}}/>
+<span aria-hidden>{streak}-day streak</span>
+</p>;
+}
+
+// Calm inline card at the top of the Today card on the exact-milestone load only.
+function StreakMilestoneBanner({streak,petName}:{streak:number;petName:string}){
+if(!STREAK_MILESTONES.includes(streak))return null;
+const copy=streakMilestoneCopy(streak,petName);
+if(!copy)return null;
+return <div className="mb-5 flex items-center gap-2.5 rounded-2xl border border-[var(--rule)] bg-[var(--paper)] px-4 py-3">
+<PawMark eyes className="h-5 w-5 shrink-0" style={{color:'var(--brass)'}}/>
+<p className="text-sm" style={{color:'var(--brass-ink)'}}>{copy}</p>
+</div>;
+}
+
+// Once-per-pet-per-week summary. Marks itself seen on mount; × hides for the week.
+function WeeklyRecap({petId,petName,days,onTime,stamps}:{petId:string;petName:string;days:number;onTime:number;stamps:number}){
+const [dismissed,setDismissed]=useState(false);
+useEffect(()=>{fetch(`/api/pets/${petId}/recap-seen`,{method:'POST'}).catch(()=>{})},[petId]);
+if(dismissed)return null;
+const clauses:string[]=[];
+if(days>0)clauses.push(`${days} day${days===1?'':'s'} logged`);
+if(onTime>0)clauses.push(`${onTime} treatment${onTime===1?'':'s'} on time`);
+if(stamps>0)clauses.push(`${stamps} new stamp${stamps===1?'':'s'}`);
+if(clauses.length===0)return null;
+return <div className="card mt-6 flex items-start gap-3 border-l-2 border-[var(--brass)] p-5">
+<PawMark eyes className="mt-0.5 h-5 w-5 shrink-0" style={{color:'var(--brass)'}}/>
+<p className="min-w-0 flex-1 text-sm text-[var(--ink-70)]"><span className="text-[var(--ink)]">This week with {petName}:</span> {clauses.join(' · ')}.</p>
+<button type="button" aria-label="Dismiss weekly recap" className="shrink-0 text-[var(--ink-60)] transition hover:text-[var(--ink)]" onClick={()=>setDismissed(true)}>×</button>
+</div>;
+}
+
+export function AppShell({email,pets,treatments,profiles,premium,lifeEventsByPet,latestWeightByPet,latestVisitByPet,treatmentCountByPet,onTimeByPet,feedingByPet={},observedTodayByPet={},puppyByPet={},streakByPet={},recapByPet={},initialNotice=''}:{
 email:string;
 pets:Pet[];
 treatments:{id:string;name:string;type:string;next_due:string;pet_id:string}[];
@@ -167,6 +211,8 @@ onTimeByPet:Record<string,number|null>;
 feedingByPet?:Record<string,{slots:string[];fed:Record<string,string>}>;
 observedTodayByPet?:Record<string,boolean>;
 puppyByPet?:Record<string,{enabled:boolean;band:string|null;suggested:string|null;total:number;done:number}>;
+streakByPet?:Record<string,number>;
+recapByPet?:Record<string,{show:boolean;days:number;onTime:number;stamps:number}>;
 initialNotice?:string;
 }){
 const router=useRouter();
@@ -268,6 +314,8 @@ const suggestion=dueSoon?null:pickSuggestion(pet.id,pet.name,completenessInput,l
 const feedInfo=feedingByPet[pet.id]||{slots:[],fed:{}};
 const fedToday={...feedInfo.fed,...(fedLocal[pet.id]||{})};
 const moodDone=!!(observedTodayByPet[pet.id]||moodLocal[pet.id]);
+const streak=streakByPet[pet.id]||0;
+const recap=recapByPet[pet.id];
 const lastWeight=latestWeightByPet[pet.id]||null;
 const daysSinceWeight=lastWeight?Math.floor((Date.now()-new Date(lastWeight).getTime())/86400000):null;
 const weightNudge=daysSinceWeight===null?!!pet.birth_date:daysSinceWeight>=7; // weekly cadence
@@ -281,6 +329,8 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 
 {pets.length>1&&<AllPetsOverview pets={pets} selectedId={pet.id} onSelect={setSelectedId} statuses={statuses}/>}
 
+{recap?.show&&<WeeklyRecap petId={pet.id} petName={pet.name} days={recap.days} onTime={recap.onTime} stamps={recap.stamps}/>}
+
 {/* ── Today / home: warm, photo-led register (Record/archive keeps the passport) ── */}
 <section className="mt-6">
 <div className="flex items-center gap-5">
@@ -291,6 +341,7 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 <h1 className="text-4xl">{pet.name}</h1>
 <p className="mt-1 text-[var(--ink-60)]"><span className="capitalize">{pet.species}</span>{ageLabel(pet.birth_date)?` · ${ageLabel(pet.birth_date)}`:''}{pet.weight_kg?` · ${pet.weight_kg} kg`:''}</p>
 {isBirthdayToday(pet.birth_date)&&<p className="mt-1 text-sm" style={{color:'var(--brass-ink)'}}>🎂 {pet.name} is {ageLabel(pet.birth_date).split(' ')[0]} today!</p>}
+<StreakLine streak={streak}/>
 </div>
 </div>
 <div className="card mt-6 p-6">
@@ -300,7 +351,7 @@ return <main className="min-h-screen bg-[var(--paper)] px-5 py-8"><div className
 </div>
 </section>
 
-<div className="card mt-8 p-6"><div className="flex items-center gap-2"><PawMark className="h-5 w-5" style={{color:'var(--brass)'}}/><h2 className="text-2xl">Today with {pet.name}</h2></div>
+<div className="card mt-8 p-6"><StreakMilestoneBanner streak={streak} petName={pet.name}/><div className="flex items-center gap-2"><PawMark className="h-5 w-5" style={{color:'var(--brass)'}}/><h2 className="text-2xl">Today with {pet.name}</h2></div>
 {isNewRecord?<div className="mt-4">
 <p className="text-[var(--brass-ink)]">Let&apos;s bring {pet.name}&apos;s page to life.</p>
 <p className="muted mt-1 text-sm">Three quick things to start — each one grows on its own from here.</p>
@@ -347,7 +398,7 @@ return puppy.enabled
 <span className="min-w-0 flex-1"><b className="block">Puppy tracker</b><span className="mono block text-xs text-[var(--ink-60)]">{puppy.total>0?`${puppy.done} of ${puppy.total} of today's routine done`:'Open today’s routine'}</span></span>
 <span className="mono shrink-0 text-[var(--brass-ink)]">Open →</span></a>
 :<a href={`/app/pets/${pet.id}/puppy`} className="card mt-6 flex items-center gap-4 p-5 transition hover:brightness-[1.02]">
-<span aria-hidden className="text-3xl">🐶</span>
+<PawMark eyes className="h-9 w-9 shrink-0" style={{color:'var(--brass)'}}/>
 <span className="min-w-0 flex-1"><b className="block">{pet.name} is still growing up</b><span className="mono block text-xs text-[var(--ink-60)]">Start a daily routine &amp; socialization checklist</span></span>
 <span className="mono shrink-0 text-[var(--brass-ink)]">Set up →</span></a>;
 })()}
@@ -361,7 +412,7 @@ return puppy.enabled
 <LifeStrip pet={pet} events={lifeEventsByPet[pet.id]||[]} treatmentCount={treatmentCountByPet[pet.id]||0} onTimePercent={onTimeByPet[pet.id]??null}/>
 <details className="mt-6">
 <summary className="mono cursor-pointer text-[var(--brass-ink)]">Milestones &amp; daily notes</summary>
-<div className="mt-4"><MilestoneAdd petId={pet.id} onAdded={()=>router.refresh()}/><ObservationLog petId={pet.id}/></div>
+<div className="mt-4"><MilestoneAdd petId={pet.id} onAdded={()=>router.refresh()} empty={!(lifeEventsByPet[pet.id]||[]).some(e=>e.id.startsWith('m-'))}/><ObservationLog petId={pet.id}/></div>
 </details>
 </section>
 

@@ -1,7 +1,8 @@
 'use client';
 import {useState} from 'react';
+import {PawMark} from './paw-mark';
 
-export function MilestoneAdd({petId,onAdded}:{petId:string;onAdded:()=>void}){
+export function MilestoneAdd({petId,onAdded,empty=false}:{petId:string;onAdded:()=>void;empty?:boolean}){
 const [open,setOpen]=useState(false);
 const [title,setTitle]=useState('');
 const [note,setNote]=useState('');
@@ -14,6 +15,7 @@ async function save(){if(!title.trim())return;setSaving(true);setError('');try{c
 
 return <div className="mt-4">
 <button type="button" className="mono text-[var(--health)]" onClick={()=>setOpen(v=>!v)}>{open?'Cancel':'+ Add a milestone'}</button>
+{empty&&!open&&<p className="muted mt-3 flex items-center gap-2 text-sm"><PawMark eyes className="h-4 w-4 shrink-0" style={{color:'var(--brass)'}}/>Nothing marked yet — firsts and favourite days live here.</p>}
 {open&&<div className="mt-3">
 <input className="w-full rounded-lg border border-[var(--rule)] bg-transparent px-3 py-2 text-sm" placeholder="First swim, gotcha day, new trick…" value={title} onChange={e=>setTitle(e.target.value)}/>
 <div className="mt-2 flex flex-wrap gap-2">

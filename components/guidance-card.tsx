@@ -1,6 +1,7 @@
 'use client';
 import {useEffect, useState} from 'react';
 import {ContentDisclaimer} from './content-disclaimer';
+import {PawMark} from './paw-mark';
 
 type Card = {kind: 'coaching' | 'vet_redirect'; headline: string; body: string; focus: string[]};
 
@@ -9,7 +10,7 @@ export function GuidanceTeaser({petName}: {petName: string}) {
   return (
     <a href="/app/settings#upgrade" className="card mt-6 block border-l-2 border-[var(--brass)] p-6 transition hover:brightness-[1.02]">
       <div className="flex items-center gap-2">
-        <span aria-hidden className="text-lg">✎</span>
+        <PawMark eyes className="h-5 w-5" style={{color: 'var(--brass)'}} />
         <p className="rule-label">This week for {petName}</p>
         <span className="chip ml-auto">Premium</span>
       </div>
@@ -71,7 +72,7 @@ export function GuidanceCard({petId, petName, preview}: {petId: string; petName:
   return (
     <section className={`card mt-6 border-l-2 p-6 ${vet ? 'border-[var(--coral)]' : 'border-[var(--brass)]'}`}>
       <div className="flex items-center gap-2">
-        <span aria-hidden className="text-lg">{vet ? '⚕' : '✎'}</span>
+        {vet ? <span aria-hidden className="text-lg">⚕</span> : <PawMark eyes className="h-5 w-5" style={{color: 'var(--brass)'}} />}
         <p className="rule-label" style={vet ? {color: 'var(--coral)'} : undefined}>{vet ? `A note about ${petName}` : `This week for ${petName}`}</p>
       </div>
       <h3 className="mt-3 text-2xl">{card.headline}</h3>

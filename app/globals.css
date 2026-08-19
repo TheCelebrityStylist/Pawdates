@@ -86,8 +86,14 @@ h1,h2,h3{font-family:var(--font-display),Georgia,serif;font-weight:700;letter-sp
 /* ── Ink stamp (small oval mark, e.g. "Done · today") + landing animation ── */
 .stamp{display:inline-flex;align-items:center;gap:6px;border:2px solid currentColor;box-shadow:inset 0 0 0 1px currentColor;border-radius:999px;padding:5px 13px;color:var(--sage);font-family:var(--font-mono);font-weight:700;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;transform:rotate(-6deg);opacity:.92}
 .stamp.overdue{color:var(--coral)}
-.stamp.hit{animation:stamp-land .34s cubic-bezier(.2,1.25,.3,1)}
-@keyframes stamp-land{0%{transform:rotate(-17deg) scale(1.7);opacity:0}55%{transform:rotate(-4deg) scale(.92);opacity:1}100%{transform:rotate(-6deg) scale(1);opacity:.92}}
+/* Completion "stamp-down": overshoot scale pulse + ink pulse (brass→done→brass),
+   both synced to 420ms. rotate(-6deg) is held across the keyframe so the rotated
+   stamp doesn't snap upright mid-animation. Reduced-motion is handled by the
+   global rule below (animation:none) → the resting end-state shows instantly. */
+.stamp.hit{animation:stamp-land 420ms cubic-bezier(.34,1.56,.64,1)}
+@keyframes stamp-land{0%{transform:rotate(-6deg) scale(1);color:var(--brass)}55%{transform:rotate(-6deg) scale(1.18);color:var(--sage)}100%{transform:rotate(-6deg) scale(1);color:var(--brass)}}
+.stamp.hit.overdue{animation-name:stamp-land-overdue}
+@keyframes stamp-land-overdue{0%{transform:rotate(-6deg) scale(1);color:var(--brass)}55%{transform:rotate(-6deg) scale(1.18);color:var(--coral)}100%{transform:rotate(-6deg) scale(1);color:var(--brass)}}
 
 .chip{border-radius:999px;padding:5px 9px;font-family:var(--font-mono);font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;background:rgba(22,35,59,.07);color:var(--ink-70)}
 .chip.health{color:var(--sage);background:rgba(79,109,87,.13)}

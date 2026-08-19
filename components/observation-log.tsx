@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react';import {observationTagLabel,observationTags,type ObservationTag} from '@/lib/care-profile';
+import {useEffect,useState} from 'react';import {observationTagLabel,observationTags,type ObservationTag} from '@/lib/care-profile';import {PawMark} from './paw-mark';
 
 type Entry={id:string;tag:ObservationTag;note:string|null;created_at:string};
 
@@ -22,7 +22,7 @@ return <div className="mt-8 border-t border-[var(--rule)] pt-5">
 <textarea className="mt-3 w-full rounded-lg border border-[var(--rule)] bg-transparent px-3 py-2 text-sm" rows={2} placeholder="Optional note — what you saw, no interpretation needed" value={note} onChange={e=>setNote(e.target.value)}/>
 <button type="button" className="btn mt-3" disabled={saving} onClick={log}>{saving?'Saving…':'Log it'}</button>
 </div>}
-{loaded&&entries.length===0&&!open&&<p className="muted mt-3 text-sm">Nothing logged yet — a quick tap here builds raw material for vet visits later.</p>}
+{loaded&&entries.length===0&&!open&&<p className="muted mt-3 flex items-center gap-2 text-sm"><PawMark eyes className="h-4 w-4 shrink-0" style={{color:'var(--brass)'}}/>Nothing logged yet — a quick tap here builds raw material for vet visits later.</p>}
 {entries.length>0&&<div className="mt-4 space-y-2">{entries.slice(0,5).map(e=><div key={e.id} className="flex items-center justify-between text-sm"><span>{observationTagLabel[e.tag]}{e.note?` — ${e.note}`:''}</span><span className="mono text-[var(--ink-60)]">{new Date(e.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</span></div>)}</div>}
 </div>;
 }

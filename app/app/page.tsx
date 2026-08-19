@@ -1,4 +1,4 @@
-import {redirect} from 'next/navigation';import {isPremium} from '@/lib/premium';import {supabase,user} from '@/lib/supabase';import type {Profile} from '@/lib/supabase';import {AppShell} from '@/components/app-shell';import {birthdayMilestones} from '@/lib/milestones';import {suggestedBand} from '@/lib/puppy';
+import {redirect} from 'next/navigation';import {isPremium} from '@/lib/premium';import {supabase,user} from '@/lib/supabase';import type {Profile} from '@/lib/supabase';import {AppShell} from '@/components/app-shell';import {birthdayMilestones} from '@/lib/milestones';import {suggestedBand} from '@/lib/puppy';import {weekStart} from '@/lib/guidance';
 
 export type LifeEvent={id:string;date:string;kind:'treatment'|'visit'|'weight'|'checkoff'|'milestone';label:string;detail:string;wasOverdue:boolean|null;photoUrl?:string|null};
 
@@ -47,6 +47,27 @@ const priRows=(priR.error?[]:priR.data||[]) as {pet_id:string}[];
 const prlRows=(prlR.error?[]:prlR.data||[]) as {pet_id:string;item_id:string}[];
 const puppyByPet=Object.fromEntries((pets||[]).map(p=>{const m=pmRows.find(x=>x.pet_id===p.id);const total=priRows.filter(x=>x.pet_id===p.id).length;const done=prlRows.filter(x=>x.pet_id===p.id).length;const suggested=suggestedBand(p.birth_date);return [p.id,{enabled:!!m?.enabled,band:m?.band||null,suggested,total,done}]}));
 
+// Engagement mechanics (migration 0023 may be unapplied → fall back to empty).
+// Streak + weekly recap are computed once here per server render, per pet.
+const thisWeek=weekStart();
+let streakByPet:Record<string,number>={};
+let recapByPet:Record<string,{show:boolean;days:number;onTime:number;stamps:number}>={};
+if(petIds.length){
+const engRes=await s.from('pet_engagement').select('pet_id,last_recap_shown_week').in('pet_id',petIds);
+const seen=Object.fromEntries(((engRes.error?[]:engRes.data||[]) as {pet_id:string;last_recap_shown_week:string|null}[]).map(r=>[r.pet_id,r.last_recap_shown_week]));
+const results=await Promise.all(petIds.map(async id=>{
+const [sr,rr]=await Promise.all([s.rpc('compute_pet_streak',{p_pet_id:id}),s.rpc('compute_pet_recap',{p_pet_id:id})]);
+const streak=sr.error?0:Number(sr.data)||0;
+const row=(rr.error?null:(Array.isArray(rr.data)?rr.data[0]:rr.data)) as {days_logged:number;on_time:number;new_stamps:number}|null;
+const days=row?.days_logged||0,onTime=row?.on_time||0,stamps=row?.new_stamps||0;
+const already=seen[id];
+const show=(!already||already<thisWeek)&&(days>0||onTime>0||stamps>0);
+return {id,streak,recap:{show,days,onTime,stamps}};
+}));
+streakByPet=Object.fromEntries(results.map(r=>[r.id,r.streak]));
+recapByPet=Object.fromEntries(results.map(r=>[r.id,r.recap]));
+}
+
 const photoUrls=Object.fromEntries((pets||[]).filter(p=>p.photo_path).map(p=>[p.id,s.storage.from('pet-photos').getPublicUrl(p.photo_path!).data.publicUrl]));
 
 const lifeEventsByPet:Record<string,LifeEvent[]>={};
@@ -80,5 +101,7 @@ onTimeByPet={onTimeByPet}
 feedingByPet={feedingByPet}
 observedTodayByPet={observedTodayByPet}
 puppyByPet={puppyByPet}
+streakByPet={streakByPet}
+recapByPet={recapByPet}
 initialNotice={query.upgraded==='1'?'Thank you — Premium is active. Every treatment record is unlocked.':query.onboarded?`${query.onboarded}'s record is running. Next up is already on the calendar.`:''}
 />}
